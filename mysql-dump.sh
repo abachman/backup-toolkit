@@ -31,7 +31,7 @@ do
   l) LIST_DBS=1
     ;;
   h|?)
-    printf "Usage: %s: [-vhl] [-u username] [-p password] " $(basename $0) >&2
+    printf "Usage: %s [-vhl] [-u username] [-p password] " $(basename $0) >&2
     printf "[-s host] [-f filename] [-t destination] database\n" >&2
     printf "\t-l\tList databases and exit\n" >&2
     printf "\t-h\tShow this help screen and exit\n" >&2
