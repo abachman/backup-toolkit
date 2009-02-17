@@ -23,6 +23,7 @@ do
   s) HOST=$OPTARG
     ;;
   f) SPEC_FILENAME=1; FILENAME=$TIMESTAMP-$OPTARG.sql.gz
+    ;;
   t) HAS_TARG=1; TARGET=$OPTARG
     ;;
   v) VFLAG=1
@@ -59,13 +60,14 @@ fi
 
 if [ $VFLAG -eq 1 ]; then
   echo "Generating Mysql backup for $DATABASE on $HOST and move to $TARGET"
-  echo "  user=$USER"
-  echo "  password=$PASSWORD"
-  echo "  filename=$FILENAME"
+  echo "\tuser\t$USER"
+  echo "\tpassword\t$PASSWORD"
+  echo "\tfilename\t$FILENAME"
+  echo "\ttarget\t$TARGET"
 fi
 
 mysqldump -u $USER -h $HOST -p$PASSWORD $DATABASE | gzip -9 > $FILENAME
-if [ $HAS_TARG -eq 1]; then
+if [ $HAS_TARG -eq 1 ]; then
   mv $FILENAME $TARGET
 fi
 
