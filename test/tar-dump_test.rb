@@ -32,7 +32,7 @@ class TarDumpTest < Test::Unit::TestCase
   def test_creates_tar_gz_file
     # exec 
     `#{@command} -v -ftest -d#{@ltmp} #{@sdir} > #{@output}`
-    fname = /([0-9]*-test\.tar\.gz)$/.match(out)[0]
+    fname = /([0-9_-]*-test\.tar\.gz)$/.match(out)[0]
     assert File.exist?(File.join(@ltmp, fname)), "Tar file should exist"
   end
 
@@ -40,7 +40,7 @@ class TarDumpTest < Test::Unit::TestCase
     # exec 
     `#{@command} -v -f#{@tfile} -c -d#{@ltmp} #{@sdir} > #{@output}`
     assert_no_match(/\.git/, out, ".git dir shouldn't exist in verbose output")
-    @fname = /([0-9]*-#{@tfile}\.tar\.gz)$/.match(out)[0]
+    @fname = /([0-9_-]*-#{@tfile}\.tar\.gz)$/.match(out)[0]
     assert File.exist?(File.join(@ltmp, @fname)), ".tar.gz file should exist"
     assert_no_match(/\.git/, tarlist, ".git dir shouldn't be in tar file")
   end
@@ -48,7 +48,7 @@ class TarDumpTest < Test::Unit::TestCase
   def test_excludes_log_files_with_e_arg
     `#{@command} -v -f#{@tfile} -c -e*.log -d#{@ltmp} #{@sdir} > #{@output}`
     assert_no_match(/.*\.log$/, out, "log files shouldn't exist in verbose output")
-    @fname = /([0-9]*-#{@tfile}\.tar\.gz)$/.match(out)[0]
+    @fname = /([0-9_-]*-#{@tfile}\.tar\.gz)$/.match(out)[0]
     assert File.exist?(File.join(@ltmp, @fname)), ".tar.gz file should exist"
     assert_no_match(/.*\.log$/, tarlist, "log files shouldn't be in tar file")
   end
@@ -57,7 +57,7 @@ class TarDumpTest < Test::Unit::TestCase
     `#{@command} -v -f#{@tfile} -c -e*.log -e*.txt -d#{@ltmp} #{@sdir} > #{@output}`
     assert_no_match(/.*\.log$/, out, "log files shouldn't exist in verbose output")
     assert_no_match(/.*\.txt$/, out, "txt files shouldn't exist in verbose output")
-    @fname = /([0-9]*-#{@tfile}\.tar\.gz)$/.match(out)[0]
+    @fname = /([0-9_-]*-#{@tfile}\.tar\.gz)$/.match(out)[0]
     assert File.exist?(File.join(@ltmp, @fname)), ".tar.gz file should exist"
     assert_no_match(/.*\.log$/, tarlist, "log files shouldn't be in tar file")
     assert_no_match(/.*\.txt$/, tarlist, "txt files shouldn't be in tar file")

@@ -2,7 +2,7 @@
 #
 # Generate timestamped, gzipped directory dump with sensible defaults.
 
-TIMESTAMP=`date +%Y%m%d%H%M%S`
+TIMESTAMP=`date +%Y_%m_%d-%H_%M_%S`
 SPEC_FILENAME=0
 VFLAG=0
 VERBOPT=
@@ -50,8 +50,9 @@ fi
 
 if [ $VFLAG -eq 1 ]; then
   printf "Generating directory backup for $SOURCE\n"
-  printf "\tlocation\t$DESTINATION/$FILENAME\n"
+  printf "\ttarget\t$DESTINATION/$FILENAME\n"
 fi
 
-tar zc${VERBOPT}f $DESTINATION/$FILENAME $SOURCE $EXCLUDE
+nice tar zc${VERBOPT}f $DESTINATION/$FILENAME $SOURCE $EXCLUDE
 
+echo $DESTINATION/$FILENAME

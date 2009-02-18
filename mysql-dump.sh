@@ -7,7 +7,7 @@ USER=root
 PASSWORD=
 HOST=localhost
 DATABASE=information_schema
-TIMESTAMP=`date +%Y%m%d%H%M%S`
+TIMESTAMP=`date +%Y_%m_%d-%H_%M_%S`
 SPEC_FILENAME=0
 VFLAG=0
 LIST_DBS=0
@@ -32,11 +32,11 @@ do
     ;;
   h|?)
     printf "Usage: %s [-vhl] [-u username] [-p password] " $(basename $0) >&2
-    printf "[-s host] [-f filename] [-t destination] database\n" >&2
+    printf "[-s host] [-f filename] [-t /destination/directory] database\n" >&2
     printf "\t-l\tList databases and exit\n" >&2
     printf "\t-h\tShow this help screen and exit\n" >&2
     printf "\t-v\tVerbose output\n" >&2
-    printf "\t-t\tDestination: should be a path somewhere on local server" >&2
+    printf "\t-t\tDestination: should be a path somewhere on local server\n\n" >&2
     exit 2
     ;;
   esac
@@ -58,6 +58,10 @@ if [ $SPEC_FILENAME -eq 0 ]; then
   FILENAME=$TIMESTAMP-$DATABASE.sql.gz
 fi
 
+if [ $HAS_TARG -eq 1 ]; then
+  TARGET=$TARGET/$FILENAME
+fi
+
 if [ $VFLAG -eq 1 ]; then
   echo "Generating Mysql backup for $DATABASE on $HOST and move to $TARGET"
   echo "\tuser\t$USER"
@@ -66,8 +70,9 @@ if [ $VFLAG -eq 1 ]; then
   echo "\ttarget\t$TARGET"
 fi
 
-mysqldump -u $USER -h $HOST -p$PASSWORD $DATABASE | gzip -9 > $FILENAME
+nice mysqldump -u $USER -h $HOST -p$PASSWORD $DATABASE | gzip -9 > $FILENAME
 if [ $HAS_TARG -eq 1 ]; then
-  mv $FILENAME $TARGET
+  nice mv $FILENAME $TARGET
 fi
 
+echo $TARGET

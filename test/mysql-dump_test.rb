@@ -14,7 +14,7 @@ class MysqlDumpTest < Test::Unit::TestCase
 
   def test_help_displays_usage
     `#{@command} -h 2> #{@output}`
-    assert_match(/Usage: mysql-dump.sh: /, out)
+    assert_match(/Usage: mysql-dump.sh /, out)
   end
 
   def test_lists_databases
@@ -24,8 +24,8 @@ class MysqlDumpTest < Test::Unit::TestCase
 
   def test_creates_backup
     `#{@command} -psecret -t/tmp -ftestfilename -v > #{@output}`
-    assert_match(/[0-9]*-testfilename\.sql\.gz$/, out)
-    fname = /([0-9]*-testfilename\.sql\.gz)$/.match(out)[0]
+    assert_match(/[0-9_-]*-testfilename\.sql\.gz$/, out, 'should match filename')
+    fname = /([0-9_-]*-testfilename\.sql\.gz)$/.match(out)[0]
     assert File.exist?("/tmp/#{fname}")
     cleanup fname
   end
