@@ -3,7 +3,20 @@
 # Usage: 
 #  sudo ./install.sh
 #
-# Run from production machine
+# Run from production machine.
+#
+# Installs:
+#   /usr/local/bin/mysql-dump
+#   /usr/local/bin/tar-dump
+#   /usr/local/bin/backup-runner
+#   /etc/cron.d/backup-runner 
+#
+# Creates:
+#   /home/USER/.backup-staging
+#   /home/USER/.backup-log
+#   /home/USER/.backup-config
+
+
 
 if [ -z "$1" ]; then
   echo "Usage: install.sh USER"
