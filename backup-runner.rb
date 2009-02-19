@@ -17,7 +17,7 @@ BACKUP_SETTINGS_DIR = Dir.new("/home/adam/.backup-config")
 BACKUP_STAGING_DIR = Dir.new("/home/adam/.backup-staging") rescue FileUtils.mkdir_p("/home/adam/.backup-staging")
 BACKUP_SETTINGS = []
 BACKUP_SETTINGS_DIR.each do |file|
-  next unless /^.*\.yml$/ =~ file
+  next unless /^.*\.backup$/ =~ file
   BACKUP_SETTINGS << File.open(File.join(BACKUP_SETTINGS_DIR.path, file)) { |f| YAML::load( f ) }
 end
 
@@ -52,8 +52,10 @@ for config in BACKUP_SETTINGS
     end
     FileUtils.rm local_filename
     # Log transfer
-    `echo "[$(date)] #{local_filename} sent to #{s["backup-hostname"]}:#{s["backup-destination"]}" >> /home/adam/.backup-log/backup-toolkit.log`
+    `echo "[$(date)] #{local_filename} sent to #{s["backup-hostname"]}:#{s["backup-destination"]}" >> /home/adam/.backup-log/run.log`
   rescue
+    `echo "[$(date)] ERROR SENDING #{local_filename} to #{s["backup-hostname"]}:#{s["backup-destination"]}" >> /home/adam/.backup-log/error.log`
+
     if s['count'] < MAX_RETRY
       s['count'] = s['count'] + 1
       BACKUP_SETTINGS << config
