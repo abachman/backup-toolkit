@@ -1,11 +1,20 @@
 #!/usr/bin/env ruby
-require 'my_utils'
-require 'rubygems'
-require 'key-exchange'
+#
+# Deploy a backup-runner config file to a production server.
+#
+# Make sure you run key-exchange.rb first.
+#
 
-class Server# {{{
-  attr_accessor :address, :username, :password
-end# }}}
+require 'lib/my_utils'
+require 'rubygems'
+#require 'key-exchange' # uncomment this line to force key exchange
+
+class Server
+  attr_accessor :hostname, :username, :password, :name
+  def ssh_address
+    "#{username}@#{hostname}"
+  end
+end
 
 module BackupToolkit
   class CreateBackupScript
@@ -13,74 +22,111 @@ module BackupToolkit
     end
 
     def run
-      get_backup_info
-      get_production_info
-
-      # send my key to production and backup
-      send_local_keyfile @backup_server.address, @backup_server.username
-      send_local_keyfile @production_server.address, @production_server.username
-
-      # send production key to backup
-      prod_key = setup_production_keyfile
-      send_production_keyfile_remote prod_key
-
-      # add backup scripts to production
-      send_backup_scripts_to_production
+      @backup_server = BackupToolkit::get_server_info("backup")
+      @production_server = BackupToolkit::get_server_info("production")
 
       # get backup command params
-      @backup_params = []
-      get_backup_command_params
+      @backup_params = get_backup_command_params
+      conf_files = []
       for cmd in @backup_params
-        puts cmd.command
+        conf_files << write_config_file(cmd)
       end
-  #    create_dump_command
+      
+      # do install
+      puts `ssh #{@production_server.ssh_address} "ls /home/#{@production_server.username}/.backup-config"`
+      if $? != 0
+        puts "MUST INSTALL ON PRODUCTION, copying files."
+        install_dir = "/home/#{@production_server.username}/.backup-install"
+        `ssh #{@production_server.ssh_address} "mkdir -p #{install_dir}"`
+        install_files = []
+        for file in Dir.new("dist/")
+          next unless File.file?(File.join('dist', file))
+          # local, remote
+          install_files << [File.join('dist', file), "#{install_dir}/#{File.split(file).last}"]  
+        end
+        puts install_files.inspect
+        BackupToolkit::send_files(@production_server, *install_files)
+        Net::SSH.start(@production_server.hostname, 
+                       @production_server.username,
+                       :password => @production_server.password) do |ssh|
+          ssh.open_channel do |channel|
+            ################## TODO: figure out this pty crap
+            channel.request_pty do |ch, success|
+              if success
+                puts "pty successfully obtained, run 'sudo ~/.backup-install/install.sh #{@production_server.username}' "
+                ch.send_data "sudo ~/.backup-install/install.sh #{@production_server.username}"
+              else
+                puts "could not obtain pty, quitting"
+                exit 1
+              end
+            end
+         end
+         ssh.loop
+       end
+      end
+
+      for file in conf_files 
+        BackupToolkit::send_files(@production_server, [file, "/home/#{@production_server.username}/.backup-config/#{file}"] )
+      end
     end
 
     def get_backup_command_params
+      backup_settings = {
+        'backup-destination' => "/home/#{@backup_server.username}/backups",
+        'backup-hostname' => @backup_server.hostname,
+        'backup-username' => @backup_server.username,
+        'backup-password' => @backup_server.password
+      }
+      params = []
       looop = true
       while looop == true 
-        case input("[production] Which backup command would you like to generate? [mysql|directory]", nil)
-        when /my/
-          msparms = MysqlBackupCommand.new 
-          msparms.database = input("enter database name:", nil)
-          msparms.username = input('enter username:', nil)
-          msparms.password = input('enter password:', nil)
-          unless msparms.database && msparms.username && msparms.password 
-            puts "Must enter all values"
+        case input("[production] Which backup command would you like to generate? [mysql|directory|quit|] ", nil).downcase
+        when /^my/
+          database = input("\t[mysql] enter database name:", nil)
+          username = input("\t[mysql] enter username:", nil)
+          password = input("\t[mysql] enter password:", nil)
+          unless database && username && password 
+            puts "!! Must enter all values."
           else 
-            @backup_params << msparms
+            params << {'mysql' => { 'database' => database,
+                                   'username' => username,
+                                   'password' => password}.merge(backup_settings) }
           end
-        when /dir/
+        when /^dir/
           # TODO: add parms
-        else
+          path = input("\t[dir] enter path to backup", nil)
+          unless path
+            puts "!! Must enter all values."
+          else 
+            params << {'directory' => { 'path' => path }.merge(backup_settings)}
+          end
+        when /^q/
           looop = false
         end
       end
+      return params
     end
-
-    # {{{ Get Server Info
-    def get_backup_info
-      @backup_server = Server.new
-      @backup_server.address = input("Which backup server will the script use?", 'backup.dreamhost.com')
-      @backup_server.username = input("Which username will the script use?", 'b112819')
-      @backup_server.password = input("Which password will the script use?", nil)
+    
+    def write_config_file cmd
+      datestamp = Time.now.strftime("%Y_%m_%d-%H_%M_%S")
+      type = cmd.keys.first
+      case cmd.keys.first
+      when 'mysql'
+        filename = "mysql-#{cmd[type]['database']}-#{datestamp}.backup"
+      when 'directory'
+        filename = "directory-#{cmd[type]['path'].gsub(/\/|\\/,"_")}-#{datestamp}.backup"
+      end
+            
+      File.open(filename, 'w') { |f| f.write(BackupToolkit::generate_config(cmd)) }
+      return filename
     end
-
-    def get_production_info
-      @production_server = Server.new
-      @production_server.address = input("Which production server will the script run from?", 'gen')
-      @production_server.username = input("Which username accesses the production server?", 'adam')
-      @production_server.password = input("Which password accesses the production server?", 'adam')
-    end# }}}
 
     def send_backup_scripts_to_production
-      log "[production] create ~/bin"
-      `ssh #{@production_server.username}@#{@production_server.address} "mkdir -p ~/bin"`
-      log "[production] copy scripts up"
-      `scp mysql-dump.sh #{@production_server.username}@#{@production_server.address}:~/bin/`
-      `scp tar-dump.sh #{@production_server.username}@#{@production_server.address}:~/bin/`
+      log "[production] copy configs up"
+      # SCP install package to production
     end
+  end
 end
 
-creator = CreateBackupScript.new
+creator = BackupToolkit::CreateBackupScript.new
 creator.run
