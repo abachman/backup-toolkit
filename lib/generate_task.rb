@@ -20,17 +20,6 @@ namespace :backup do
     upload config_file, "#{remote_config_dir}/#{create_config_name(parms)}"
     FileUtils.rm_rf 'tmp'
   end
-
-  desc "force backup tasks on the selected production server to run"
-  task :execute, :roles => :production do
-    run "backup-runner"
-  end
-
-  desc "list backup files on the backup server"
-  task :list, :roles => :backup do
-    run "ls #{backup_server['backup_storage']}"
-  end
-
 end
 
 def get_backup_command_params

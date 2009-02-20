@@ -4,6 +4,7 @@ load 'deploy' if respond_to?(:namespace) # cap2 differentiator
 load 'lib/server_info'
 load 'lib/generate_task'
 load 'lib/key_exchange'
+load 'lib/backup_tasks'
 
 role :production, production_server['ssh_address']
 role :backup, backup_server['ssh_address']
