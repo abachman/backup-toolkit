@@ -16,8 +16,6 @@
 #   /home/USER/.backup-log
 #   /home/USER/.backup-config
 
-
-
 if [ -z "$1" ]; then
   echo "Usage: install.sh USER"
   exit 1
@@ -35,6 +33,11 @@ if [ ! -x "/home/$1" ]; then
   exit 1
 fi
 
+if [ "`which $0`"="dist/install.sh" ]; then
+  curdir=dist/
+else
+  curdir=./
+fi
 
 mkdir -p /home/$username/.backup-staging
 mkdir -p /home/$username/.backup-log
@@ -42,23 +45,28 @@ touch /home/$username/.backup-log/run.log
 touch /home/$username/.backup-log/error.log
 install_log=/home/$username/.backup-log/install.log
 touch $install_log
+echo "--- `date`" > $install_log
 mkdir -p /home/$username/.backup-config
-master=/home/$username/.backup-config/master.config
+master=/etc/backup-toolkit.conf
 touch $master
-echo "---" >> $master
+echo "---" > $master
 echo "config-directory: /home/$username/.backup-config" >> $master
 echo "staging-directory: /home/$username/.backup-staging" >> $master
-echo "logging-directory: /home/$username/.backup-staging" >> $master
+echo "logging-directory: /home/$username/.backup-log" >> $master
+
+chown -R $username:$username /home/$username/.backup-log
+chown -R $username:$username /home/$username/.backup-config
+chown -R $username:$username /home/$username/.backup-staging
 
 echo "[$(date)] installing mysql-dump" >> $install_log
-chmod +x mysql-dump.sh 
-cp mysql-dump.sh /usr/local/bin/mysql-dump
+chmod +x $curdir/mysql-dump.sh 
+cp $curdir/mysql-dump.sh /usr/local/bin/mysql-dump
 echo "[$(date)] installing tar-dump" >> $install_log
-chmod +x tar-dump.sh
-cp tar-dump.sh /usr/local/bin/tar-dump 
+chmod +x $curdir/tar-dump.sh
+cp $curdir/tar-dump.sh /usr/local/bin/tar-dump 
 echo "[$(date)] installing backup-runner" >> $install_log
-chmod +x backup-runner.rb
-cp backup-runner.rb /usr/local/bin/backup-runner
+chmod +x $curdir/backup-runner.rb
+cp $curdir/backup-runner.rb /usr/local/bin/backup-runner
 
 echo "[$(date)] installing /etc/cron.d/backup-runner" >> $install_log
 
@@ -79,6 +87,9 @@ chmod +x $cronfile
 echo "# cron entry for backup-runner (SLS Internal)" >  $cronfile
 echo "SHELL=/bin/sh" >> $cronfile
 echo "PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin" >> $cronfile
+#echo "* * * * * $username /usr/local/bin/backup-runner" >> $cronfile
 echo "$minute $hour * * * $username /usr/local/bin/backup-runner" >> $cronfile
 
 echo "[$(date)] finished installing backup-toolkit" >> $install_log
+
+echo "install complete, see $install_log for details."

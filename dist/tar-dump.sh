@@ -24,7 +24,7 @@ do
     ;;
   h|?)
     printf "Backs up SOURCE to DESTINATION.  By default will backup . to .\n\n" >&2
-    printf "Usage: %s: [-vhn] [-f filename] [-d destination] [-e PATTERN] source\n" $(basename $0) >&2
+    printf "Usage: %s: [-vhn] [-f filename] [-d destination] [-e PATTERN] /path/to/source\n" $(basename $0) >&2
     printf "\t-h\tShow this help screen and exit\n" >&2
     printf "\t-v\tVerbose output\n" >&2
     printf "\t-e\ttar --exclude PATTERN, 'man tar' for details. NOTE: to ignore\n" >&2
@@ -45,7 +45,7 @@ else
 fi
 
 if [ $SPEC_FILENAME -eq 0 ]; then
-  FILENAME=$TIMESTAMP-`pwd | awk '{sub(/\//,"",$0); gsub(/\//,"-",$0); print $0}'`.tar.gz
+  FILENAME=$TIMESTAMP-`echo $SOURCE | awk '{sub(/\//,"",$0); gsub(/\//,"-",$0); print $0}'`.tar.gz
 fi
 
 if [ $VFLAG -eq 1 ]; then

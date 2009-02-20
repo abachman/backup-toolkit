@@ -34,5 +34,8 @@ rm -f /usr/local/bin/backup-runner
 echo "removing /etc/cron.d/backup-runner"
 rm -f /etc/cron.d/backup-runner
 
+echo "removing /etc/backup-toolkit.conf"
+rm -f /etc/backup-toolkit.conf
+
 echo "finished removing backup-toolkit"
 

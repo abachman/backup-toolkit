@@ -4,9 +4,10 @@ require 'fileutils'
 
 class MysqlDumpTest < Test::Unit::TestCase 
   def setup
-    @command = File.join(File.dirname(__FILE__), '..', 'mysql-dump.sh')
+    @command = File.join(File.dirname(__FILE__), '..', 'dist', 'mysql-dump.sh')
     @output = "/tmp/mysql-dump.out" 
   end
+
   def teardown
     cleanup @output
     @out = nil

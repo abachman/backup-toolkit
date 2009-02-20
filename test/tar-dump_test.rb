@@ -8,7 +8,7 @@ class TarDumpTest < Test::Unit::TestCase
   def setup
     @ltmp = File.join(LOCAL_PATH, "tmp")
     FileUtils.mkdir(@ltmp)
-    @command = File.join(LOCAL_PATH, '..', 'tar-dump.sh')
+    @command = File.join(LOCAL_PATH, '..', 'dist', 'tar-dump.sh')
     @output = File.join(@ltmp, "tar-dump.out")
     @tfile = 'test'
     create_simple_dir
