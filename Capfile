@@ -1,6 +1,5 @@
 #!/usr/bin/env ruby
 
-load 'deploy' if respond_to?(:namespace) # cap2 differentiator
 load 'lib/server_info'
 load 'lib/generate_task'
 load 'lib/key_exchange'
