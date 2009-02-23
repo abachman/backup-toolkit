@@ -61,6 +61,7 @@ if [ $VFLAG -eq 1 ]; then
   echo "\ttarget\t$TARGET"
 fi
 
-nice mysqldump -u $USER -h $HOST -p$PASSWORD $DATABASE | gzip -9 > $TARGET/$FILENAME
+echo "nice mysqldump -u$USER -h$HOST -p$PASSWORD $DATABASE | gzip -9 > $TARGET/$FILENAME"
+nice mysqldump -u$USER -h$HOST -p$PASSWORD $DATABASE | gzip -9 > $TARGET/$FILENAME
 
 echo $TARGET/$FILENAME

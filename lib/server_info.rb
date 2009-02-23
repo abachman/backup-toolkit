@@ -58,12 +58,22 @@ def _load_all_configs
 end
 
 def get_nodes
-  res = (all_servers.select { |id, conf| conf['type'] == 'node' })
+  if ENV['BT_NODE'] && all_servers[ENV['BT_NODE']]
+    puts "Using #{ ENV['BT_NODE'] } node config"
+    return [ all_servers[ENV['BT_NODE']] ]
+  else
+    res = all_servers.select { |id, conf| conf['type'] == 'node' }
+  end
   return (res.class == {}.class ? res : res.map(&:last))
 end
 
 def get_backups
-  res = (all_servers.select { |id, conf| conf['type'] == 'backup' })
+  if ENV['BT_BACKUP'] && all_servers[ENV['BT_BACKUP']]
+    puts "Using #{ ENV['BT_BACKUP'] } node config"
+    return [ all_servers[ENV['BT_BACKUP']] ]
+  else
+    res = all_servers.select { |id, conf| conf['type'] == 'backup' }
+  end
   return (res.class == {}.class ? res : res.map(&:last))
 end
 

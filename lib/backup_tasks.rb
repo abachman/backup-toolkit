@@ -23,7 +23,29 @@ namespace :backup do
 
   desc "list backup files on the backup server"
   task :list, :roles => :backup do
-    run "ls #{backup_server['backup_storage']}"
+    run "ls -sh1 #{backup_server['backup_storage']}"
+  end
+
+  desc "dump a given backup package"
+  task :dump, :roles => :backup do 
+    if ENV['BACKUP_FILE'] 
+      fname = "#{ backup_server['backup_storage'] }/#{ ENV['BACKUP_FILE'] }"
+      if /\.tar\.gz/ =~ fname
+        run "[ -r #{ fname } ] && tar tf #{ fname } || echo 'error opening file'"
+      elsif /\.sql\.gz/ =~ fname
+        run "[ -r #{ fname } ] && zcat #{ fname } || echo 'error opening file'"
+      else
+        run "echo \"unknown filetype, can't access\""
+      end
+    else
+      puts "No backup file specified. Run backup:list to get filenames and then run this"
+      puts "command again with the BACKUP_FILE=filename specified."
+    end
+  end
+
+  desc "dump node's run.log file (record of backups)"
+  task :log, :roles => :node do
+    run "[ -r /home/#{ node_server['username'] }/.backup-log/run.log ] && cat /home/#{ node_server['username'] }/.backup-log/run.log"
   end
 
   desc "list backup jobs on the node"
