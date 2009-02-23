@@ -87,14 +87,21 @@ The differences to notice are the `type` fields and the `backup_storage` field i
 
 ### Capistrano Tasks
 
-    cap apply_key:all  # (0) send your ssh key to node and backup and send 
-                         node key to backup.
-    cap backup:create  # (2) Create new mysql or directory backup task
-    cap backup:execute # force backup tasks on node to run
-    cap backup:jobs    # list backup jobs on node
-    cap backup:list    # list backup files stored on backup
-    cap dist:install   # (1) install backup-toolkit on a node
-    cap dist:uninstall # uninstall backup-toolkit on a node
+    cap backup:create     # Create new mysql or directory backup task
+    cap backup:execute    # force backup tasks on the selected node to run
+    cap backup:jobs       # list backup jobs on the node
+    cap backup:list       # list backup files on the backup server
+    cap dist:install      # install backup-toolkit on node
+    cap dist:uninstall    # uninstall backup-toolkit on node
+    cap invoke            # Invoke a single command on the remote servers.
+    cap keys:sync         # send your ssh key to node and backup and send
+                            node's ssh key to backup
+    cap keys:show:backup  # show installed keys on backup
+    cap keys:show:local   # show installed keys on your machine, will probably 
+                            prompt for your local admin password.
+    cap keys:show:node    # show installed keys on node
+    cap shell             # Begin an interactive Capistrano session.
+
 
 All tasks rely on the config files you created.  If there's only one config file, backup-toolkit will use that by default.  Otherwise it'll ask which one you want to use.
 
@@ -104,13 +111,16 @@ From admin:
 
 1. Create configs for backup and production.
 
-2. `cap apply_key:all` - make sure backup knows who node is and node knows who backup is. Also, make sure both know the admin. Some folks like backup-toolkit for this feature alone. (see *lib/key_exchange.rb* for details)
+2. `cap keys:sync` - make sure backup knows who node is and node knows who backup is. Also, make sure both know the admin. Some folks like backup-toolkit for this feature alone. (see *lib/key_exchange.rb* for details)
 
 3. `cap dist:install` - this one is safe to repeat if the software is updated.  It's recommended, in fact, if you've created backup jobs on the node.  dist:uninstall will wipe out all your backup tasks, dist:install will simply overwrite the scripts and master config file.
 
 4. `cap backup:create` - repeat as neccessary.
 
 5. `cap backup:execute` - just to make sure everything runs smoothly.
+
+6. `cap backup:jobs` - show a listing of backup tasks on the node. The listing should be in Wikimedia format, suitable for documentation.
+
 
 ### Coming Soon
 

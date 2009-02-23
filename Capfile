@@ -5,8 +5,18 @@ load 'lib/generate_task'
 load 'lib/key_exchange'
 load 'lib/backup_tasks'
 
-role :node, node_server['ssh_address']
-role :backup, backup_server['ssh_address']
+role :node do
+  node_server['ssh_address']
+end
+role :backup do 
+  backup_server['ssh_address']
+end
+
+before "dist:install", "dist:send_pkg"
+after "dist:install", "dist:cleanup"
+
+before "dist:uninstall", "dist:send_pkg"
+after "dist:uninstall", "dist:cleanup"
 
 namespace :dist do
   task :send_pkg, :roles => :node do
@@ -23,17 +33,13 @@ namespace :dist do
 
   desc "install backup-toolkit on node"
   task :install, :roles => :node do
-    send_pkg
     sudo "dist/install.sh #{node_server['username']}"
     run "cat /home/#{node_server['username']}/.backup-log/install.log"
-    cleanup
   end
 
   desc "uninstall backup-toolkit on node"
   task :uninstall, :roles => :node do
-    send_pkg
     sudo "dist/uninstall.sh #{node_server['username']}"
-    cleanup
   end
 end
 

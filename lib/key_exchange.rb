@@ -1,26 +1,23 @@
 def retrieve_remote_key remote
   puts "RETRIEVING REMOTE KEY"
   ssh_dir = "/home/#{node_server['username']}/.ssh"
-  key_exists = capture("if [ -x #{ ssh_dir }/id_rsa.pub ]; then echo true; else echo false; fi", 
-                       :hosts => remote['ssh_address'])
+  key_exists = capture("if [ -r #{ ssh_dir }/id_rsa.pub ]; then echo true; else echo false; fi", 
+                       :hosts => remote['ssh_address']).chomp
   if key_exists == 'false'
+    puts "Forcing id_rsa.pub creation on #{ remote['ssh_address'] }"
     run "mkdir -p #{ ssh_dir } && chmod 700 #{ ssh_dir }", :hosts => remote['ssh_address']
-    # create key with blank passphrase
-    run "ssh-keygen -t rsa -q -f #{ ssh_dir }/id_rsa", 
-        :hosts => remote['ssh_address'] do |ch, stream, data|
-      if stream == :out and /^Enter/ =~ data
-        ch.send_data("\r")
-      end
-    end
+    # create key with blank passphrase if necessary
+    run "yes '\r' | ssh-keygen -t rsa -q -f #{ ssh_dir }/id_rsa", 
+        :hosts => remote['ssh_address']    
   end
-  return capture("cat #{ ssh_dir }/id_rsa.pub", :hosts => remote['ssh_address'])
+  return capture("cat #{ ssh_dir }/id_rsa.pub", :hosts => remote['ssh_address']).chomp
 end
 
-namespace :apply_key do
+namespace :keys do
   desc "send your ssh key to node and backup and send node's ssh key to backup"
-  task :all do
+  task :sync do
     puts "If this is your first time logging in to #{node_server['hostname']} or #{backup_server['hostname']} you may have to enter passwords."
-    prod_key = retrieve_remote_key(node_server)
+    node_key = retrieve_remote_key(node_server)
     my_key = choose_my_key
 
     # send my key to node
@@ -30,10 +27,29 @@ namespace :apply_key do
     _apply_key_to_remote my_key, backup_server, 'authorized_keys'
 
     # send node key to backup
-    _apply_key_to_remote prod_key, backup_server, 'authorized_keys'
+    _apply_key_to_remote node_key, backup_server, 'authorized_keys'
 
     # send backup's key to node (known hosts)
+    puts 'applying backup key to node known_hosts'
     _apply_key_to_remote retrieve_remote_key(backup_server), node_server, 'known_hosts'
+  end
+
+  namespace :show do
+    desc "show installed keys on node"
+    task :node do
+      _show_trusted_ssh_keys node_server['ssh_address']
+    end
+    desc "show installed keys on backup"
+    task :backup do
+      _show_trusted_ssh_keys backup_server['ssh_address']
+    end
+    desc "show installed keys on your machine, will probably prompt for your admin password"
+    task :local do
+      _show_trusted_ssh_keys 'localhost'
+    end
+    task :all do
+      _show_trusted_ssh_keys
+    end
   end
 end
 
@@ -49,9 +65,13 @@ def _apply_key_to_remote key, remote, keyfile
 
   # create remote .ssh directory and chmod it to user-only 
   run "mkdir -p #{ ssh_dir } && chmod 700 #{ ssh_dir }", :hosts => remote['ssh_address']
+
+  # make sure keyfile exists
+  run "touch #{ ssh_dir }/#{ keyfile }", :hosts => remote['ssh_address']
   
   # add key if it hasn't already been added
-  run "if [ -z \"$(grep '#{ key }' #{ ssh_dir }/#{ keyfile })\" ]; then echo \"#{ key }\" >> #{ ssh_dir }/authorized_keys; fi || true", :hosts => remote['ssh_address']
+  run("if [ -z \"$(grep '#{ key }' #{ ssh_dir }/#{ keyfile })\" ]; then echo \"#{ key }\" >> #{ ssh_dir }/#{ keyfile }; else echo 'already exists on #{ remote['id'] }'; fi || true", 
+      :hosts => remote['ssh_address'])
 end
 
 # select the local public key that will be used.
@@ -66,5 +86,15 @@ def choose_my_key
     keys.each_with_index { |key, c| puts "\t#{c}.\t#{key}" }
     key = keys[Capistrano::CLI.ui.ask("> ").to_i || 0]
   end
-  return `cat #{ key }`
+  return `cat #{ key }`.chomp
+end
+
+def _show_trusted_ssh_keys remote
+  auth_keys = capture("echo '----------------- Authorized Keys' && cat ~/.ssh/authorized_keys", 
+                      :hosts => remote)
+  known_hosts = capture("echo '----------------- Known Hosts' && cat ~/.ssh/known_hosts",
+                        :hosts => remote)
+  puts "Authorized Keys and Known Hosts file on #{ remote }"
+  puts auth_keys
+  puts known_hosts
 end
