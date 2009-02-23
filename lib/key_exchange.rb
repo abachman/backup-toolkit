@@ -1,6 +1,6 @@
 def retrieve_remote_key remote
   puts "RETRIEVING REMOTE KEY"
-  ssh_dir = "/home/#{production_server['username']}/.ssh"
+  ssh_dir = "/home/#{node_server['username']}/.ssh"
   key_exists = capture("if [ -x #{ ssh_dir }/id_rsa.pub ]; then echo true; else echo false; fi", 
                        :hosts => remote['ssh_address'])
   if key_exists == 'false'
@@ -17,23 +17,23 @@ def retrieve_remote_key remote
 end
 
 namespace :apply_key do
-  desc "send your ssh key to production and backup and send production's ssh key to backup"
+  desc "send your ssh key to node and backup and send node's ssh key to backup"
   task :all do
-    puts "If this is your first time logging in to #{production_server['hostname']} or #{backup_server['hostname']} you may have to enter passwords."
-    prod_key = retrieve_remote_key(production_server)
+    puts "If this is your first time logging in to #{node_server['hostname']} or #{backup_server['hostname']} you may have to enter passwords."
+    prod_key = retrieve_remote_key(node_server)
     my_key = choose_my_key
 
-    # send my key to production
-    _apply_key_to_remote my_key, production_server, 'authorized_keys'
+    # send my key to node
+    _apply_key_to_remote my_key, node_server, 'authorized_keys'
 
     # send my key to backup
     _apply_key_to_remote my_key, backup_server, 'authorized_keys'
 
-    # send production key to backup
+    # send node key to backup
     _apply_key_to_remote prod_key, backup_server, 'authorized_keys'
 
-    # send backup's key to production (known hosts)
-    _apply_key_to_remote retrieve_remote_key(backup_server), production_server, 'known_hosts'
+    # send backup's key to node (known hosts)
+    _apply_key_to_remote retrieve_remote_key(backup_server), node_server, 'known_hosts'
   end
 end
 

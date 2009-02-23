@@ -16,8 +16,8 @@ def templatize template, namespace
 end
 
 namespace :backup do
-  desc "force backup tasks on the selected production server to run"
-  task :execute, :roles => :production do
+  desc "force backup tasks on the selected node to run"
+  task :execute, :roles => :node do
     run "backup-runner"
   end
 
@@ -26,8 +26,8 @@ namespace :backup do
     run "ls #{backup_server['backup_storage']}"
   end
 
-  desc "list backup jobs on the production server"
-  task :jobs, :roles => :production do
+  desc "list backup jobs on the node"
+  task :jobs, :roles => :node do
     confs_dir = nil
     confs = []
     templs = []

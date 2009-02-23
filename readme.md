@@ -60,34 +60,30 @@ You, the administrator, must have Ruby and Capistrano installed.  The nodes must
 
 Create config files in backup-toolkit/config on your machine.  They look like: 
 
-`**config/node-192.168.1.31.yml**`
+*config/sample-node.yml*
 
     # Example node configuration
-    #
-    # hostname: 192.168.1.31
-    # username: adam
-    # password: adam
 
+    type: node
+    id: ubuntu-general-VM
     hostname: 192.168.1.31
     username: adam
     password: adam
 
 or 
 
-`**config/backup-192.168.1.28.yml**`
+*config/sample-backup.yml*
 
     # Example backup configuration
-    #
-    # hostname: 192.168.1.28
-    # username: adam
-    # password: adam
 
+    type: backup
+    id: red5-VM-the-second
     hostname: 192.168.1.28
     username: red5server
     password: red5server
     backup_storage: /home/red5server/backups
 
-The only difference right now is the backup_storage field in the backup config file.  Create as many of either as you like, backup-toolkit will ask if it's not sure which configuration to use.  
+The differences to notice are the `type` fields and the `backup_storage` field in the backup config file.  Create as many of either as you like, backup-toolkit will ask if it's not sure which configuration to use. Filename doesn't matter, but config files should all end with `.yml` or they won't be picked up.
 
 ### Capistrano Tasks
 

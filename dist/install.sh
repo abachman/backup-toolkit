@@ -3,7 +3,7 @@
 # Usage: 
 #  sudo ./install.sh
 #
-# Run from production machine.
+# Run from node.
 #
 # Installs:
 #   /usr/local/bin/mysql-dump
@@ -15,6 +15,7 @@
 #   /home/USER/.backup-staging
 #   /home/USER/.backup-log
 #   /home/USER/.backup-config
+#   /etc/backup-toolkit.conf
 
 if [ -z "$1" ]; then
   echo "Usage: install.sh USER"
@@ -44,15 +45,14 @@ mkdir -p /home/$username/.backup-log
 touch /home/$username/.backup-log/run.log
 touch /home/$username/.backup-log/error.log
 install_log=/home/$username/.backup-log/install.log
-touch $install_log
-echo "--- `date`" > $install_log
+echo "--- $(date)" > $install_log
 mkdir -p /home/$username/.backup-config
 master=/etc/backup-toolkit.conf
-touch $master
 echo "---" > $master
-echo "config-directory: /home/$username/.backup-config" >> $master
-echo "staging-directory: /home/$username/.backup-staging" >> $master
-echo "logging-directory: /home/$username/.backup-log" >> $master
+echo "config_directory: /home/$username/.backup-config" >> $master
+echo "staging_directory: /home/$username/.backup-staging" >> $master
+echo "logging_directory: /home/$username/.backup-log" >> $master
+echo "local_hostname: $(hostname)"
 
 chown -R $username:$username /home/$username/.backup-log
 chown -R $username:$username /home/$username/.backup-config
@@ -70,10 +70,8 @@ cp $curdir/backup-runner.rb /usr/local/bin/backup-runner
 
 echo "[$(date)] installing /etc/cron.d/backup-runner" >> $install_log
 
-## insert cronjob
-# m h dom mon dow user	command
-
-# run at random time
+## insert cronjob to run at random time before 4 AM
+# m h dom mon dow user command
 minutes=60
 hours=4
 hour=1
@@ -87,7 +85,6 @@ chmod +x $cronfile
 echo "# cron entry for backup-runner (SLS Internal)" >  $cronfile
 echo "SHELL=/bin/sh" >> $cronfile
 echo "PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin" >> $cronfile
-#echo "* * * * * $username /usr/local/bin/backup-runner" >> $cronfile
 echo "$minute $hour * * * $username /usr/local/bin/backup-runner" >> $cronfile
 
 echo "[$(date)] finished installing backup-toolkit" >> $install_log

@@ -24,9 +24,9 @@ class MysqlDumpTest < Test::Unit::TestCase
   end
 
   def test_creates_backup
-    `#{@command} -psecret -t/tmp -ftestfilename -v > #{@output}`
-    assert_match(/[0-9_-]*-testfilename\.sql\.gz$/, out, 'should match filename')
-    fname = /([0-9_-]*-testfilename\.sql\.gz)$/.match(out)[0]
+    `#{@command} -psecret -t/tmp -v > #{@output}`
+    assert_match(/[0-9_-]*-information_schema\.sql\.gz$/, out, 'should match filename')
+    fname = /([0-9_-]*-.*\.sql\.gz)$/.match(out)[0]
     assert File.exist?("/tmp/#{fname}")
     cleanup fname
   end

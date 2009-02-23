@@ -7,22 +7,14 @@ USER=root
 PASSWORD=
 HOST=localhost
 DATABASE=information_schema
-TIMESTAMP=`date +%Y_%m_%d-%H_%M_%S`
-SPEC_FILENAME=0
 VFLAG=0
 LIST_DBS=0
-HAS_TARG=0
-TARGET=.
-while getopts 'u:p:s:f:t:vlh' OPTION
+while getopts 'u:p:t:vlh' OPTION
 do
   case $OPTION in
   u) USER=$OPTARG
     ;;
   p) PASSWORD=$OPTARG
-    ;;
-  s) HOST=$OPTARG
-    ;;
-  f) SPEC_FILENAME=1; FILENAME=$TIMESTAMP-$OPTARG.sql.gz
     ;;
   t) HAS_TARG=1; TARGET=$OPTARG
     ;;
@@ -32,7 +24,7 @@ do
     ;;
   h|?)
     printf "Usage: %s [-vhl] [-u username] [-p password] " $(basename $0) >&2
-    printf "[-s host] [-f filename] [-t /destination/directory] database\n" >&2
+    printf "[-s host] [-t /destination/directory] database\n" >&2
     printf "\t-l\tList databases and exit\n" >&2
     printf "\t-h\tShow this help screen and exit\n" >&2
     printf "\t-v\tVerbose output\n" >&2
@@ -43,9 +35,7 @@ do
 done
 shift $(($OPTIND - 1))
 
-if [ -z "$1" ]; then
-  DATABASE=information_schema
-else
+if [ ! -z "$1" ]; then
   DATABASE=$1
 fi
 
@@ -54,12 +44,13 @@ if [ $LIST_DBS -eq 1 ]; then
   exit
 fi
 
-if [ $SPEC_FILENAME -eq 0 ]; then
-  FILENAME=$TIMESTAMP-$DATABASE.sql.gz
-fi
+TIMESTAMP=`date +%Y_%m_%d-%H_%M_%S`
+FILENAME=$TIMESTAMP-$DATABASE.sql.gz
 
-if [ $HAS_TARG -eq 1 ]; then
-  TARGET=$TARGET/$FILENAME
+if [ $HAS_TARG ]; then
+  TARGET=$TARGET
+else 
+  TARGET=.
 fi
 
 if [ $VFLAG -eq 1 ]; then
@@ -70,9 +61,6 @@ if [ $VFLAG -eq 1 ]; then
   echo "\ttarget\t$TARGET"
 fi
 
-nice mysqldump -u $USER -h $HOST -p$PASSWORD $DATABASE | gzip -9 > $FILENAME
-if [ $HAS_TARG -eq 1 ]; then
-  nice mv $FILENAME $TARGET
-fi
+nice mysqldump -u $USER -h $HOST -p$PASSWORD $DATABASE | gzip -9 > $TARGET/$FILENAME
 
-echo $TARGET
+echo $TARGET/$FILENAME

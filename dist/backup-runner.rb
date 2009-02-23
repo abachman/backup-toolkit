@@ -17,14 +17,15 @@ MAX_RETRY = 3
 begin
   MASTER_CONFIG = File.open("/etc/backup-toolkit.conf") { |yf| YAML::load( yf ) }
 rescue 
-  `echo "[$(date)] FAILED TO START, NO CONFIG FILE" >> /tmp/fail.log`
+  `echo "[$(date)] FAILED TO START, NO MASTER CONFIG FILE" >> /tmp/fail.log`
   puts "Failed to find config file! ABORT"
   raise
 end
 
-BACKUP_SETTINGS_DIR = Dir.new(MASTER_CONFIG['config-directory'])
-BACKUP_STAGING_DIR = Dir.new(MASTER_CONFIG['staging-directory'])
-BACKUP_LOGGING_DIR = Dir.new(MASTER_CONFIG['logging-directory'])
+BACKUP_SETTINGS_DIR = Dir.new(MASTER_CONFIG['config_directory'])
+BACKUP_STAGING_DIR = Dir.new(MASTER_CONFIG['staging_directory'])
+BACKUP_LOGGING_DIR = Dir.new(MASTER_CONFIG['logging_directory'])
+HOSTNAME = MASTER_CONFIG['local_hostname']
 BACKUP_SETTINGS = []
 BACKUP_SETTINGS_DIR.each do |file|
   next unless /^.*\.backup$/ =~ file

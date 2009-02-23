@@ -2,8 +2,8 @@ require 'fileutils'
 
 namespace :backup do
   desc "Create new mysql or directory backup task"
-  task :create, :roles => :production do
-    remote_config_dir = "/home/#{production_server['username']}/.backup-config"
+  task :create, :roles => :node do
+    remote_config_dir = "/home/#{node_server['username']}/.backup-config"
     begin
       run("ls #{remote_config_dir}")
       puts "remote config directory exists"
@@ -30,7 +30,7 @@ def get_backup_command_params
   }
   looop = true
   while looop == true 
-    case Capistrano::CLI.ui.ask("[production] Which backup command would you like to generate? [mysql|directory] ").downcase
+    case Capistrano::CLI.ui.ask("[node] Which backup command would you like to generate? [mysql|directory] ").downcase
     when /^my/
       database = Capistrano::CLI.ui.ask("\t[mysql] enter database name:")
       username = Capistrano::CLI.ui.ask("\t[mysql] enter username:")

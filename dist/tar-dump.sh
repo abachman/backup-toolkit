@@ -1,22 +1,16 @@
 #!/usr/bin/env bash
 #
 # Generate timestamped, gzipped directory dump with sensible defaults.
-
-TIMESTAMP=`date +%Y_%m_%d-%H_%M_%S`
-SPEC_FILENAME=0
-VFLAG=0
 VERBOPT=
 HAS_DEST=0
 DESTINATION=.
 EXCLUDE=
-while getopts 'f:d:e:cvlh' OPTION
+while getopts 'd:e:cvlh' OPTION
 do
   case $OPTION in
-  f) SPEC_FILENAME=1; FILENAME=$TIMESTAMP-$OPTARG.tar.gz
-    ;;
   d) HAS_DEST=1; DESTINATION=$OPTARG
     ;;
-  v) VFLAG=1; VERBOPT=v
+  v) VERBOPT=v
     ;;
   e) EXCLUDE="$EXCLUDE --exclude=$OPTARG"
     ;;
@@ -24,7 +18,7 @@ do
     ;;
   h|?)
     printf "Backs up SOURCE to DESTINATION.  By default will backup . to .\n\n" >&2
-    printf "Usage: %s: [-vhn] [-f filename] [-d destination] [-e PATTERN] /path/to/source\n" $(basename $0) >&2
+    printf "Usage: %s: [-vhn] [-d destination] [-e PATTERN] /path/to/source\n" $(basename $0) >&2
     printf "\t-h\tShow this help screen and exit\n" >&2
     printf "\t-v\tVerbose output\n" >&2
     printf "\t-e\ttar --exclude PATTERN, 'man tar' for details. NOTE: to ignore\n" >&2
@@ -44,15 +38,15 @@ else
   SOURCE=$1
 fi
 
-if [ $SPEC_FILENAME -eq 0 ]; then
-  FILENAME=$TIMESTAMP-`echo $SOURCE | awk '{sub(/\//,"",$0); gsub(/\//,"-",$0); print $0}'`.tar.gz
-fi
+tstamp=`date +%Y_%m_%d-%H_%M_%S`
+dirname=`echo $SOURCE | awk '{sub(/\//,"",$0); gsub(/\//,"-",$0); print $0}'`
+FILENAME=$tstamp-$dirname.tar.gz
 
-if [ $VFLAG -eq 1 ]; then
+if [ "$VERBOPT"="v" ]; then
   printf "Generating directory backup for $SOURCE\n"
   printf "\ttarget\t$DESTINATION/$FILENAME\n"
 fi
 
-nice tar zc${VERBOPT}f $DESTINATION/$FILENAME $SOURCE $EXCLUDE
+nice tar zc${VERBOPT}f $DESTINATION/$FILENAME $SOURCE $EXCLUDE &> /dev/null
 
 echo $DESTINATION/$FILENAME
