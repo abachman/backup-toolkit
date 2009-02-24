@@ -68,7 +68,6 @@ Create config files in *backup-toolkit/config* on your machine.  They look like:
     id: ubuntu-general-VM
     hostname: 192.168.1.31
     username: adam
-    password: adam
 
 or 
 
@@ -80,30 +79,36 @@ or
     id: red5-VM-the-second
     hostname: 192.168.1.28
     username: red5server
-    password: red5server
-    backup_storage: /home/red5server/backups
+    backup_storage: backups
 
 The differences to notice are the `type` fields and the `backup_storage` field in the backup config file.  Create as many of either as you like, backup-toolkit will ask if it's not sure which configuration to use. Filename doesn't matter, but config files should all end with `.yml` or they won't be picked up.
 
+You will be prompted for a password every time backup-toolkit tries to load a configuration file, but if you've already done a key:sync on the server it's asking you about, you can leave the password blank.
+
 ### Capistrano Tasks
 
-    cap backup:create     # Create new mysql or directory backup task
-    cap backup:execute    # force backup tasks on the selected node to run
-    cap backup:jobs       # list backup jobs on the node
-    cap backup:list       # list backup files on the backup server
-    cap dist:install      # install backup-toolkit on node
-    cap dist:uninstall    # uninstall backup-toolkit on node
-    cap invoke            # Invoke a single command on the remote servers.
-    cap keys:sync         # send your ssh key to node and backup and send
-                            node's ssh key to backup
-    cap keys:show:backup  # show installed keys on backup
-    cap keys:show:local   # show installed keys on your machine, will probably 
-                            prompt for your local admin password.
-    cap keys:show:node    # show installed keys on node
-    cap shell             # Begin an interactive Capistrano session.
+    cap backup:list      # list backup files on the backup server
+    cap dist:install     # install backup-toolkit on node
+    cap dist:uninstall   # uninstall backup-toolkit on node
+    cap keys:show:backup # show installed keys on backup
+    cap keys:show:local  # show installed keys on your machine
+    cap keys:show:node   # show installed keys on node
+    cap keys:sync:local  # send your ssh key to node and backup
+    cap keys:sync:remote # node's ssh key to backup
+    cap node:create_task # Create new mysql or directory backup task
+    cap node:execute     # force backup tasks on the selected node to run
+    cap node:jobs        # list backup jobs on the node
+    cap node:log         # dump node's run.log file (record of backups)
 
+All tasks rely on the config files you created. If there's only one config file, backup-toolkit will use that by default. Otherwise it'll ask which one you want to use. 
 
-All tasks rely on the config files you created.  If there's only one config file, backup-toolkit will use that by default.  Otherwise it'll ask which one you want to use.
+Reminder: everytime backup-toolkit loads up a server config file, it prompts for a password. If you've already exchanged keys, it's safe to just leave it blank.
+
+### Command Line Parameters
+
+All tasks accept `BT_NODE=[node id]` and `BT_BACKUP=[backup id]` to skip the config selection prompt.  For example:
+
+    cap keys:sync BT_NODE=ubuntu-general BT_BACKUP=red5-VM 
 
 ### Example Workflow
 
@@ -113,13 +118,19 @@ From admin:
 
 2. `cap keys:sync` - make sure backup knows who node is and node knows who backup is. Also, make sure both know the admin. Some folks like backup-toolkit for this feature alone. (see *lib/key_exchange.rb* for details)
 
-3. `cap dist:install` - this one is safe to repeat if the software is updated.  It's recommended, in fact, if you've created backup jobs on the node.  dist:uninstall will wipe out all your backup tasks, dist:install will simply overwrite the scripts and master config file.
+3. `cap dist:install` - this one is safe to repeat if the software is updated.  If you've created backup jobs on the node, this is the recommended way of updating or rescheduling backup-runner.  dist:uninstall will wipe out all your backup tasks, dist:install will simply overwrite the scripts and master config file.
 
-4. `cap backup:create` - repeat as neccessary.
+4. `cap node:create_task` - repeat as neccessary.
 
-5. `cap backup:execute` - just to make sure everything runs smoothly.
+5. `cap node:execute` - just to make sure everything runs smoothly.
 
-6. `cap backup:jobs` - show a listing of backup tasks on the node. The listing should be in Wikimedia format, suitable for documentation.
+Optional
+
+`cap node:jobs` - show a listing of backup tasks on the node. The listing should be in Wikimedia format, suitable for documentation.
+
+`cap node:log` - read the log file on a given node.
+
+`cap backup:list` - show a listing of all archive files on a given backup server.
 
 
 ### Coming Soon
