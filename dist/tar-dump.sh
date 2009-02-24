@@ -38,7 +38,8 @@ else
   SOURCE=$1
 fi
 
-tstamp=`date +%Y_%m_%d-%H_%M_%S`
+# Backups are specific to the day.
+tstamp=`date +%Y_%m_%d`
 dirname=`echo $SOURCE | awk '{sub(/\//,"",$0); gsub(/\//,"-",$0); print $0}'`
 FILENAME=$tstamp-$dirname.tar.gz
 
@@ -47,6 +48,8 @@ if [ "$VERBOPT"="v" ]; then
   printf "\ttarget\t$DESTINATION/$FILENAME\n"
 fi
 
-nice tar zc${VERBOPT}f $DESTINATION/$FILENAME $SOURCE $EXCLUDE &> /dev/null
+# Only create a new dump if one doesn't exist. This prevents duplication of effort in the case that 
+# we have multiple tasks backing up the same directory at the same time.
+[ ! -e $DESTINATION/$FILENAME ] && (nice tar zc${VERBOPT}f $DESTINATION/$FILENAME $SOURCE $EXCLUDE)
 
 echo $DESTINATION/$FILENAME

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Usage: 
-#  sudo ./install.sh
+#  sudo ./install.sh [hour] [minute]
 #
 # Run from node.
 #
@@ -22,6 +22,20 @@ if [ -z "$1" ]; then
   exit 1
 else
   username=$1
+fi
+
+if [ "$2" -a "$3" ]; then
+  hour=$2
+  minute=$3
+else
+  ## insert cronjob to run at random time before 4 AM
+  # m h dom mon dow user command
+  minutes=60
+  hours=4
+  hour=1
+  minute=1
+  let "hour = $RANDOM % $hours +1"
+  let "minute = $RANDOM % $minutes"
 fi
 
 if [ ! "root" == "$(id | sed 's/uid=[0-9][0-9]*(\([^)]*\)).*/\1/')" ]; then
@@ -68,16 +82,8 @@ echo "[$(date)] installing backup-runner" >> $install_log
 chmod +x $curdir/backup-runner.rb
 cp $curdir/backup-runner.rb /usr/local/bin/backup-runner
 
-echo "[$(date)] installing /etc/cron.d/backup-runner" >> $install_log
+echo "[$(date)] installing /etc/cron.d/backup-runner for runtime $hour:$minute" >> $install_log
 
-## insert cronjob to run at random time before 4 AM
-# m h dom mon dow user command
-minutes=60
-hours=4
-hour=1
-minute=1
-let "hour = $RANDOM % $hours +1"
-let "minute = $RANDOM % $minutes"
 
 cronfile=/etc/cron.d/backup-runner
 touch $cronfile

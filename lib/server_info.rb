@@ -1,10 +1,10 @@
 
 set(:backup_server) do
-  _get_server_info 'backup'
+  _get_server_info('backup')
 end
 
 set(:node_server) do
-  _get_server_info 'node'
+  _get_server_info('node')
 end
 
 set(:all_servers) do
@@ -22,7 +22,6 @@ type: backup
 id: red5-VM
 hostname: 192.168.1.28
 username: red5server
-password: red5server
 backup_storage: /home/red5server/backups
 EOS
 
@@ -33,7 +32,6 @@ type: node
 id: ubuntu-general-VM
 hostname: 192.168.1.31
 username: adam
-password: adam
 EOS
 
 def sample_configs; "#{ backup_config_sample } \n\n#{ node_config_sample }"; end
@@ -96,6 +94,8 @@ def _get_server_info env
   end
 
   opts['ssh_address'] = "#{opts['username']}@#{opts['hostname']}" if (opts['username'] && opts['hostname'])
+  opts['password'] = Capistrano::CLI.password_prompt("#{ opts['ssh_address'] } password: ").chomp
+  opts['password'] = nil if opts['password'].empty?
   opts || raise("no #{env} config available, add #{env}.yml to config directory. #{ sample_configs }")
 end
 

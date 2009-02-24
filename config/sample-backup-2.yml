@@ -4,5 +4,4 @@ type: backup
 id: red5-VM-the-second
 hostname: 192.168.1.28
 username: red5server
-password: red5server
 backup_storage: /home/red5server/backups

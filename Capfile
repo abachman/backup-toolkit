@@ -4,6 +4,9 @@ load 'lib/server_info'
 load 'lib/generate_task'
 load 'lib/key_exchange'
 load 'lib/backup_tasks'
+load 'lib/node_tasks'
+
+set :auth_methods, %w( publickey password )
 
 role :node do
   node_server['ssh_address']
@@ -33,7 +36,11 @@ namespace :dist do
 
   desc "install backup-toolkit on node"
   task :install, :roles => :node do
-    sudo "dist/install.sh #{node_server['username']}"
+    r_h = sprintf "%02i", (rand(4) + 1)
+    r_m = sprintf "%02i", rand(60)
+    run_time = Capistrano::CLI.ui.ask("what time would you like to run backups (hh:mm)? [#{ r_h }:#{ r_m }] ")
+    run_time = (run_time.chomp.empty? || run_time.count(':') != 1) ? "#{r_h}:#{r_m}" : run_time.chomp
+    sudo "dist/install.sh #{node_server['username']} #{ run_time.split(':')[0] } #{ run_time.split(':')[1] }"
     run "cat /home/#{node_server['username']}/.backup-log/install.log"
   end
 

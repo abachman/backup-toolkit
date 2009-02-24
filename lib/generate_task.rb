@@ -1,14 +1,14 @@
 require 'fileutils'
 
-namespace :backup do
+namespace :node do
   desc "Create new mysql or directory backup task"
-  task :create, :roles => :node do
+  task :create_task, :roles => :node do
     remote_config_dir = "/home/#{node_server['username']}/.backup-config"
     begin
       run("ls #{remote_config_dir}")
       puts "remote config directory exists"
     rescue 
-      puts "remote config directory doesn't exist, please run 'cap dist:install' before running 'cap backup:create'"
+      puts "remote config directory doesn't exist, please run 'cap dist:install' before running 'cap node:create_task'"
       exit (1)
     end
 
@@ -24,7 +24,7 @@ end
 
 def get_backup_command_params
   backup_settings = {
-    'backup_destination' => "/home/#{backup_server['username']}/backups",
+    'backup_destination' => "backups",
     'backup_hostname' => backup_server['hostname'],
     'backup_username' => backup_server['username']
   }
@@ -32,9 +32,9 @@ def get_backup_command_params
   while looop == true 
     case Capistrano::CLI.ui.ask("[node] Which backup command would you like to generate? [mysql|directory] ").downcase
     when /^my/
-      database = Capistrano::CLI.ui.ask("\t[mysql] enter database name:")
-      username = Capistrano::CLI.ui.ask("\t[mysql] enter username:")
-      password = Capistrano::CLI.ui.ask("\t[mysql] enter password:")
+      database = Capistrano::CLI.ui.ask("[mysql] enter database name:")
+      username = Capistrano::CLI.ui.ask("[mysql] enter username:")
+      password = Capistrano::CLI.password_prompt("[mysql] enter password:")
       unless database && username && password 
         puts "!! Must enter all values."
       else 
@@ -44,7 +44,7 @@ def get_backup_command_params
         looop = false
       end
     when /^dir/
-      path = Capistrano::CLI.ui.ask("\t[dir] enter path to backup", nil)
+      path = Capistrano::CLI.ui.ask("[dir] enter path to backup", nil)
       unless path
         puts "!! Must enter all values."
       else 
@@ -63,8 +63,8 @@ def create_config_name params
   type = params.keys.first
   case params.keys.first
   when 'mysql'
-    "mysql-#{params[type]['database']}.backup"
+    "mysql-#{ params[type]['database'] }-to-#{ params[type]['backup_hostname'] }.backup"
   when 'directory'
-    "directory-#{params[type]['path'].gsub(/\/|\\/,"_").gsub(/^_/,'')}.backup"
+    "directory-#{ params[type]['path'].gsub(/\/|\\/,"_").gsub(/^_/,'') }-to-#{ params[type]['backup_hostname'] }.backup"
   end
 end

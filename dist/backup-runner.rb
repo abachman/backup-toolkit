@@ -9,6 +9,7 @@
 #
 require 'yaml'
 require 'fileutils'
+require 'logger'
 
 # how many times should we try to send the file?
 MAX_RETRY = 3
@@ -32,7 +33,12 @@ BACKUP_SETTINGS_DIR.each do |file|
   BACKUP_SETTINGS << File.open(File.join(BACKUP_SETTINGS_DIR.path, file)) { |f| YAML::load( f ) }
 end
 
-`echo "starting backup of #{ HOSTNAME }" >> #{File.join(BACKUP_LOGGING_DIR.path, "run.log")}`
+# Setup logger
+log_file = File.open(File.join(BACKUP_LOGGING_DIR.path, "run.log"), 'a')
+log = Logger.new(log_file, 10, 1024000)
+log.level = Logger::DEBUG
+
+log.info("starting backup of #{ HOSTNAME }")
 
 # GENERATE BACKUP FILES
 for config in BACKUP_SETTINGS
@@ -40,11 +46,11 @@ for config in BACKUP_SETTINGS
   temp = File.join(BACKUP_STAGING_DIR.path, '.out')
   if config['directory']
     s = config['directory']
-    puts "doing directory backup of #{s['path']}"
+    log.debug("doing directory backup of #{s['path']}")
     output = `tar-dump -d#{BACKUP_STAGING_DIR.path} #{s['path']}`
   elsif config['mysql']
     s = config['mysql']
-    puts "doing mysql backup of #{s["database"]}"
+    log.debug("doing mysql backup of #{s["database"]}")
     output = `mysql-dump -v -u#{s['username']} -p#{s['password']} -t#{BACKUP_STAGING_DIR.path} #{s['database']}`
   end
   
@@ -55,18 +61,18 @@ for config in BACKUP_SETTINGS
   s['count'] = 0
 end
 
+log.info("sending staged backups")
 for config in BACKUP_SETTINGS
   s = config['directory'] || config['mysql']
   local_fullfilename = s['local_filename']
   local_filename = File.split(local_fullfilename).last
-  puts "sending #{local_filename} to #{s["backup_hostname"]}:#{s["backup_destination"]}"
+  log.debug("sending #{local_filename} to #{s["backup_hostname"]}:#{s["backup_destination"]}")
   begin
     # Copy file from local to remote, renaming to prepend the sender (this node's hostname).
     `nice scp #{local_fullfilename} #{s["backup_username"]}@#{s["backup_hostname"]}:#{s["backup_destination"]}/#{ HOSTNAME }-#{local_filename}`
-    `echo "[$(date)] #{local_filename} sent to #{s["backup_hostname"]}:#{s["backup_destination"]}/#{ HOSTNAME }-#{local_filename}" >> #{File.join(BACKUP_LOGGING_DIR.path, "run.log")}`
-    `rm -rf #{local_fullfilename}`
+    log.info "#{local_filename} sent to #{s["backup_hostname"]}:#{s["backup_destination"]}/#{ HOSTNAME }-#{local_filename}"
   rescue
-    `echo "[$(date)] ERROR SENDING #{local_filename} to #{s["backup_hostname"]}:#{s["backup_destination"]}" >> #{File.join(BACKUP_LOGGING_DIR.path, "error.log")}`
+    log.error("ERROR SENDING #{ local_filename } to #{ s["backup_hostname"] }:#{ s["backup_destination"] }")
     if s['count'] < MAX_RETRY
       s['count'] = s['count'] + 1
       BACKUP_SETTINGS << config
@@ -74,4 +80,11 @@ for config in BACKUP_SETTINGS
   end
 end
 
-`echo "finished backup of #{ HOSTNAME }" >> #{File.join(BACKUP_LOGGING_DIR.path, "run.log")}`
+log.info("cleaning up staged files")
+BACKUP_STAGING_DIR.each do |staged_file|
+  `rm -rf #{local_fullfilename}`
+end
+
+log.info("backup complete")
+log.close()
+

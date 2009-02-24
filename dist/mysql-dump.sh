@@ -44,7 +44,7 @@ if [ $LIST_DBS -eq 1 ]; then
   exit
 fi
 
-TIMESTAMP=`date +%Y_%m_%d-%H_%M_%S`
+TIMESTAMP=`date +%Y_%m_%d`
 FILENAME=$TIMESTAMP-$DATABASE.sql.gz
 
 if [ $HAS_TARG ]; then
@@ -61,7 +61,8 @@ if [ $VFLAG -eq 1 ]; then
   echo "\ttarget\t$TARGET"
 fi
 
-echo "nice mysqldump -u$USER -h$HOST -p$PASSWORD $DATABASE | gzip -9 > $TARGET/$FILENAME"
-nice mysqldump -u$USER -h$HOST -p$PASSWORD $DATABASE | gzip -9 > $TARGET/$FILENAME
+# Only create a new dump if one doesn't exist. This prevents duplication of effort in the case that 
+# we have multiple tasks backing up the same directory at the same time.
+[ ! -e $TARGET/$FILENAME ] && (nice mysqldump -u$USER -h$HOST -p$PASSWORD $DATABASE | gzip -9 > $TARGET/$FILENAME)
 
 echo $TARGET/$FILENAME
