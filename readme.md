@@ -78,10 +78,11 @@ or
     type: backup
     id: red5-VM-the-second
     hostname: 192.168.1.28
-    username: red5server
-    backup_storage: backups
+    username: red5server     
+    backup_storage: backups   # where the backups will be stored relative to 
+                              # username's home directory
 
-The differences to notice are the `type` fields and the `backup_storage` field in the backup config file.  Create as many of either as you like, backup-toolkit will ask if it's not sure which configuration to use. Filename doesn't matter, but config files should all end with `.yml` or they won't be picked up.
+The differences to notice are the `type` fields and the `backup_storage` field in the backup config file. Create as many of either as you like, backup-toolkit will ask if it's not sure which configuration to use. Filename doesn't matter, but config files should all end with `.yml` or they won't be picked up. 
 
 You will be prompted for a password every time backup-toolkit tries to load a configuration file, but if you've already done a key:sync on the server it's asking you about, you can leave the password blank.
 

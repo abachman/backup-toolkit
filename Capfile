@@ -1,16 +1,19 @@
 #!/usr/bin/env ruby
 
-load 'lib/server_info'
-load 'lib/generate_task'
-load 'lib/key_exchange'
+require 'lib/confighandler'
+
+load 'lib/server_info_tasks'
+load 'lib/key_exchange_tasks'
 load 'lib/backup_tasks'
 load 'lib/node_tasks'
+
 
 set :auth_methods, %w( publickey password )
 
 role :node do
   node_server['ssh_address']
 end
+
 role :backup do 
   backup_server['ssh_address']
 end
