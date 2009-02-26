@@ -20,7 +20,7 @@ end
 namespace :keys do
   desc "send your key to a remote server (adhoc)"
   task :add do
-    my_key = choose_my_key
+    my_key = choose_keyfile
     _apply_key_to_remote my_key, adhoc_server, 'localhost'
   end
 
@@ -41,7 +41,7 @@ namespace :keys do
       _apply_key_to_remote my_key, backup_server, 'localhost'
     end
 
-    desc "keys:sync:local keys:sync:remote"
+    desc "keys:sync:local && keys:sync:remote"
     task :default do
       local
       remote
@@ -106,11 +106,22 @@ def choose_my_key
   elsif keys.empty?
     raise "No keys available, please run ssh-keygen, then try again" 
   else 
-    puts "[local] Which personal key do you want to deploy? [0]"
+    puts "[local] Which personal key do you want to deploy?"
     keys.each_with_index { |key, c| puts "\t#{c}.\t#{key}" }
-    key = keys[Capistrano::CLI.ui.ask("> ").to_i || 0]
+    choice = Capistrano::CLI.ui.ask("> ") { |q| q.default = 0; q.answer_type = Integer }
+    key = keys[choice]
   end
   return File.new(key).read.chomp
+end
+
+def choose_keyfile
+  keys = `ls ~/.ssh/*.pub`.split()
+  keyfile = Capistrano::CLI.ui.ask("enter /path/to/local/keyfile: ") do |q|
+    q.default = keys[0] if keys.size > 0
+    q.validate = lambda { |fname| File.exist? fname }
+    q.responses[:not_valid] = "Keyfile doesn't exist, please try again."
+  end
+  return File.new(keyfile).read.chomp
 end
 
 def _show_trusted_ssh_keys remote

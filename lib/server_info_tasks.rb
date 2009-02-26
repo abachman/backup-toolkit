@@ -27,21 +27,21 @@ def _get_server_info env
     if conf_choices.size == 1
       opts = conf_choices[0]
     else
-      puts "choose a configuration for #{env}: [0]"
+      puts "choose a configuration for #{env}:"
       conf_choices.each_with_index do |conf, n|
         puts " [#{n}] #{ conf['id'] } (#{ conf['username'] }@#{ conf['hostname'] })"
       end
      
-      confirm = Capistrano::CLI.ui.ask("> ")
-      if confirm.empty? or confirm.to_i > conf_choices.size - 1
-        opts = conf_choices[0]
-      else 
-        opts = conf_choices[confirm.to_i]
-      end
+      choice = Capistrano::CLI.ui.ask("> ") { |q| q.default = 0; q.answer_type = Integer }
+      opts = conf_choices[choice]
     end
   when /adhoc/
-    opts['hostname'] = Capistrano::CLI.ui.ask("target hostname: ")
-    opts['username'] = Capistrano::CLI.ui.ask("target username: ")
+    opts['hostname'] = Capistrano::CLI.ui.ask("target hostname: ") do |q| 
+      q.default = ENV['hostname']
+    end
+    opts['username'] = Capistrano::CLI.ui.ask("target username: ") do |q|
+      q.default = ENV['username']
+    end
     opts['id'] = "adhoc server #{opts['username']}@#{opts['hostname']}"
   end
 

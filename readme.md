@@ -43,7 +43,7 @@ The backup-toolkit does the rest. In the interest of security and stability, we 
 
 ### Requirements
 
-You, the administrator, must have Ruby and Capistrano installed.  The nodes must have Ruby and ssh. Mysql and mysqldump is only necessary if you're creating mysql backup tasks. Beyond that it should run on any modern linux distribution.
+You, the administrator, must have Ruby and Capistrano installed.  The nodes must have Ruby and ssh. Mysql and mysqldump is only necessary on nodes if they're going to be running mysql backup tasks. Beyond that it should run on any modern *nix distribution.
 
 ### Layout on Your Machine
 
@@ -69,8 +69,6 @@ Create config files in *backup-toolkit/config* on your machine.  They look like:
     hostname: 192.168.1.31
     username: adam
 
-or 
-
 *config/sample-backup.yml*
 
     # Example backup configuration
@@ -82,18 +80,32 @@ or
     backup_storage: backups   # where the backups will be stored relative to 
                               # username's home directory
 
-The differences to notice are the `type` fields and the `backup_storage` field in the backup config file. Create as many of either as you like, backup-toolkit will ask if it's not sure which configuration to use. Filename doesn't matter, but config files should all end with `.yml` or they won't be picked up. 
+* config/config-repo.yml
+
+    # Example connection repo config 
+
+    type: connections
+    id: central-connection-repository
+    hostname: 192.168.1.31
+    username: adam
+    config_directory: connections
+
+Create as many of either as you like, backup-toolkit will ask if it's not sure which configuration to use. Filename doesn't matter, but config files should all end with `.yml` or they won't be picked up. 
 
 You will be prompted for a password every time backup-toolkit tries to load a configuration file, but if you've already done a key:sync on the server it's asking you about, you can leave the password blank.
+
+If you're working in a team environment, and for the sake of easy auditing, you can set up a central configuration repository.  After searching your local ./config path, backup-toolkit will look in <code>username@hostname:~/path/to/configs</code> for node and backup config files.  **WARNING**: configurations in the remote repository with the same id as connections from your local directory will overwrite their local counterpart.
 
 ### Capistrano Tasks
 
     cap backup:list      # list backup files on the backup server
     cap dist:install     # install backup-toolkit on node
     cap dist:uninstall   # uninstall backup-toolkit on node
+    cap keys:add         # send your key to a remote server (adhoc)
     cap keys:show:backup # show installed keys on backup
     cap keys:show:local  # show installed keys on your machine
     cap keys:show:node   # show installed keys on node
+    cap keys:sync        # keys:sync:local keys:sync:remote
     cap keys:sync:local  # send your ssh key to node and backup
     cap keys:sync:remote # node's ssh key to backup
     cap node:create_task # Create new mysql or directory backup task
@@ -133,9 +145,9 @@ Optional
 
 `cap backup:list` - show a listing of all archive files on a given backup server.
 
+`cap keys:add` - add a key of your choice to the server of your choice. Takes optional `username` and `hostname` command line parameters.
 
 ### Coming Soon
 
-* Command line flags to set preferred servers.
 * More backup auditing and reporting.  More attention paid to the backup server in general.
 * Restore. 

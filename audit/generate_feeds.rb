@@ -1,3 +1,10 @@
+# Should be deployed with:
+#   config/config-repo.yml
+#   lib/confighandler.rb
+#
+
+ACCESS_KEY = "wcl2SXc573It3BAnvW7jOMqbGm7gAF29eaC5VbphGhPsTfE0dqnsOz2ojXbt3ap8VmfviecZCT5jkM2aakZK9C2pNuoIXKtL5TDcfOheWVaw3X4Q3YfZWikhmHQ8Wh42bvWuOOxofTiNaMQLufYjle4tXHZo8n0PJvFgdUbYm6DxpYFHW9wcHT77q0UcnHKlXeM4x6a5Dy7UTT9hGGwrdpvrCKpFVhAf6ZSBecY2tu4aawtmfdDqvxhlKWzphi6"
+
 require 'net/http'
 require 'net/https'
 require 'uri'
@@ -28,10 +35,10 @@ class BackupServer
       _files = []
       Net::SFTP.start(hostname, username, :auth_methods => ['publickey']) do |sftp|
         sftp.dir.foreach(storage_dir) do |f|
-          _files << [f.name, f.attributes]
+          _files << { :name => f.name, :attributes => f.attributes }
         end
       end
-      return _files
+      return _files.sort {|a, b| a[:attributes].mtime <=> b[:attributes].mtime}
     end
 end
 # }}}
@@ -85,22 +92,27 @@ def generate_intended_filename_regex conf
   end
 end
 
+# Get 20 most recent files
 def find_files_on_backup conf
   file_matcher = generate_intended_filename_regex conf
   unless BACKUP_SERVERS[conf['backup_hostname']]
-    BACKUP_SERVERS[conf['backup_hostname']] = 
-      BackupServer.new(conf['backup_hostname'], 
-                       conf['backup_username'], 
-                       conf['backup_destination'])
+    bs = BackupServer.new(conf['backup_hostname'], 
+                          conf['backup_username'], 
+                          conf['backup_destination'])
+    BACKUP_SERVERS[conf['backup_hostname']] = bs
   end
   bs = BACKUP_SERVERS[conf['backup_hostname']]
-  return bs.all_files.select {|file| /#{ file_matcher }/ =~ file[0] }
+  files = bs.all_files.select {|file| /#{ file_matcher }/ =~ file[:name] }
+  return files.reverse()[0,20]
 end
 
-def generate_feed_for_node node
+def generate_feeds_for_node node
   feeds = []
+  FileUtils.mkdir_p 'feeds'
+
   jobs = get_jobs_on_node(node)
   jobs.each do |job|
+    files = find_files_on_backup job
     content = RSS::Maker.make("2.0") do |m|
       m.channel.title = "backup-toolkit audit feed for node: #{ node['username'] }@#{ node['hostname'] }, job: #{ job['config_filename'] }"
       m.channel.link = "http://slsdev.net"
@@ -109,45 +121,93 @@ def generate_feed_for_node node
                               "backing up to: #{ job['backup_username'] }@#{ job['backup_hostname'] }:"\
                               "~/#{ job['backup_destination'] }"
       m.items.do_sort = true
-      files = find_files_on_backup job
       for f in files
         i = m.items.new_item
-        i.title = f[0]
+        i.title = f[:name]
         i.link = "#"
-        i.description = "#{ f[0] }: #{ f[1].size } bytes"
-        i.date = Time.at(f[1].mtime)
-        i.guid.content = "#{ node['username'] }-#{ node['hostname'] }-#{ job['local_hostname'] }-#{ job['config_filename'] }-#{ f[0] }"
+        i.description = "#{ f[:name] }: #{ f[:attributes].size } bytes"
+        i.date = Time.at(f[:attributes].mtime)
+        i.guid.content = "#{ node['username'] }-#{ node['hostname'] }-"\
+                         "#{ job['local_hostname'] }-#{ job['config_filename'] }-"\
+                         "#{ f[:name] }"
         i.guid.isPermaLink = false
       end
     end
-    FileUtils.mkdir_p 'feeds'
     feed_filename = "#{ node['username'] }-#{ node['hostname'] }-#{ job['local_hostname'] }-#{ job['config_filename'] }.xml"
-    feeds << [feed_filename, content.to_s]
+    feeds << { 
+      :filename => feed_filename, 
+      :content => content.to_s,
+      :job => job, 
+      :files => files 
+    }
   end
   return feeds
 end
 
-upload_key = "Lz33aqjKwR1vlObbnm7T4zlHycOGvWHxiELkS6V65TxvTo0JqB9fvJ1GfYs5sY8kYAJlSsZ8frjkNmLtoz2"\
-             "roRGgywbL24WMbOkORdUk8nrhtFjBwF1MK8Y5BdzzL1U3oCsZajhky4lQBCihK4CifoVxPhbzf6WPY80LPO"\
-             "e62t4TxKI8OiwkyJJhKD6VUopEjhlNvy1kQ0GSi4pSEpXUFLFSGiQXeEUMuX8iJQPr1ptKKJVIdpXAdZpcagSgOuoN"
-url = URI.parse 'https://www.slsdev.net/backup-status/upload-feed.php'
+def run()
+  one_day_ago = Time.now - (60 * 60 * 24)
+  snapshot = RSS::Maker.make("2.0") do |m|
+    m.channel.title = "backup-toolkit daily activity"
+    m.channel.link = "http://slsdev.net"
+    m.channel.description = "backup-toolkit daily activity snapshot, current status of all packages."
+    m.items.do_sort = true
 
-ConfigHandler::all_nodes.each do |config|
-  feeds = generate_feed_for_node config
-  for feed in feeds
-    # POST to windev2
-    filename = feed[0]
-    content = feed[1]
-    req = Net::HTTP::Post.new(url.path)
-    puts "POSTING #{ filename } to #{ url.path }"
-    req.set_form_data({ 'filename' => filename, 'content' => content, 'upload_key' => upload_key })
-    _http = Net::HTTP.new(url.host, url.port)
-    _http.use_ssl = true
-    res = _http.start do |http| 
-      http.use_ssl = true
-      http.request(req)
+    i = m.items.new_item 
+    i.description = "<p><strong>Backup Toolkit Snapshot</strong></p><ul>"
+    i.date = Time.now
+    i.guid.content = "admin-snapshot-#{ Time.now }"
+    i.guid.isPermaLink = false
+
+    visited_nodes = {}
+    ConfigHandler::all_nodes.each do |config|
+      next if visited_nodes["#{ config['username'] }@#{ config['hostname'] }"]
+      visited_nodes["#{ config['username'] }@#{ config['hostname'] }"] = true
+
+      feeds = generate_feeds_for_node config
+      puts "using #{ config.inspect }"
+      for feed in feeds
+        # Add this feed's info to snapshot
+        job_title = "#{feed[:job]['config_filename']} on #{feed[:job]['local_hostname']}"
+        if Time.at(feed[:files].first()[:attributes].mtime) > one_day_ago 
+          status_message = "up to date."
+        else
+          status_message = "<b><span style='background-color:red;'>IS NOT UP TO DATE!!!!</span></b>"
+        end
+        i.description << <<-EOS
+          <li>
+            <p><em>#{ job_title }</em></p>
+            <p><a href="https://slsdev.net/backup-status/get-feed.php?filename=#{ feed[:filename] }&access_key=#{ACCESS_KEY}">
+              #{ feed[:filename] }</a></p>
+            <p>config: <code>#{ feed[:job].inspect }</code></p>
+            <p>The current file is
+              #{ status_message } 
+            </p>
+          </li>
+        EOS
+        
+        # POST to windev2
+        filename = feed[:filename]
+        content = feed[:content]
+        post_to_windev2 filename, content.to_s
+      end
     end
-    puts res.body
-  end
+    i.description << "</ul>"
+  end # finish today's admin rss feed
+  post_to_windev2 "Backup Toolkit Administrative Feed", snapshot.to_s
 end
 
+def post_to_windev2 filename, content
+  url = URI.parse 'https://www.slsdev.net/backup-status/upload-feed.php'
+  req = Net::HTTP::Post.new(url.path)
+  print "POSTING #{ filename } to #{ url.path }: "
+  req.set_form_data({ 'filename' => filename, 'content' => content, 'upload_key' => ACCESS_KEY })
+  _http = Net::HTTP.new(url.host, url.port)
+  _http.use_ssl = true
+  res = _http.start do |http| 
+    http.use_ssl = true
+    http.request(req)
+  end 
+  puts res.body
+end
+
+run()

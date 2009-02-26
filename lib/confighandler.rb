@@ -76,10 +76,9 @@ module ConfigHandler
 
   # Check remote configuration server for connection .yml files (nodes and backups)
   def self.load_remote_configs servs
-    puts "loading remote connection configurations"
-    if servs['central-connection-repository'] 
-      configs = {}
-      conf = servs['central-connection-repository']
+    configs = {}
+    (servs.select { |id, c| c['type'] == 'connections' }).map(&:last).each do |conf|
+      puts "loading remote connection configurations from #{ conf['hostname'] }"
       Net::SSH.start(conf['hostname'], conf['username'], :auth_methods => ['publickey']) do |ssh|
         config_files = ssh.exec!("[ -e #{ conf['config_directory'] } ] && ls #{ conf['config_directory'] }").chomp
         for conf_file in config_files
@@ -97,14 +96,13 @@ module ConfigHandler
           end
         end
       end
-      return configs
-    else 
-      return {}
     end
+    return configs
   end
 
   def self.all_nodes; @@all_nodes ||= get_nodes; end
   def self.all_backups; @@all_backups ||= get_backups; end
+  def self.all_connections; @@all_connections ||= get_connections; end
 
   def self.get_nodes
     if ENV['BT_NODE'] && all_servers[ENV['BT_NODE']]
@@ -124,6 +122,10 @@ module ConfigHandler
       res = all_servers.select { |id, conf| conf['type'] == 'backup' }
     end
     return (res.class == {}.class ? res : res.map(&:last))
+  end
+
+  def self.get_connections
+    return (all_servers.select { |id, c| c['type'] == 'connections' }).map(&:last)
   end
 
   def self.create_temp_config_file config_hash

@@ -7,6 +7,7 @@ load 'lib/key_exchange_tasks'
 load 'lib/backup_tasks'
 load 'lib/node_tasks'
 load 'lib/connection_tasks'
+load 'lib/audit_tasks'
 
 set :auth_methods, %w( publickey password )
 
@@ -60,4 +61,5 @@ end
 task :shell do
 
 end
+
 
