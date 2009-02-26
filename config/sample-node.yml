@@ -1,4 +1,4 @@
-# Example node configuration
+# Example node connection configuration
 
 type: node
 id: ubuntu-general-VM

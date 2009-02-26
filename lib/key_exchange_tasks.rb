@@ -18,6 +18,12 @@ def retrieve_remote_key remote
 end
 
 namespace :keys do
+  desc "send your key to a remote server (adhoc)"
+  task :add do
+    my_key = choose_my_key
+    _apply_key_to_remote my_key, adhoc_server, 'localhost'
+  end
+
   desc "setup ssh keys for backup-toolkit"
   namespace :sync do
     desc "node's ssh key to backup"
@@ -28,7 +34,6 @@ namespace :keys do
 
     desc "send your ssh key to node and backup"
     task :local do
-      node_key = retrieve_remote_key(node_server)
       my_key = choose_my_key
       # send my key to node
       _apply_key_to_remote my_key, node_server, 'localhost'
@@ -36,6 +41,7 @@ namespace :keys do
       _apply_key_to_remote my_key, backup_server, 'localhost'
     end
 
+    desc "keys:sync:local keys:sync:remote"
     task :default do
       local
       remote
@@ -63,8 +69,7 @@ end
 # If server A's public key is added to server B's authorized_keys file, 
 # server A can login to server B without a password.
 #
-# If server B's public key is added to server A's known_hosts file, 
-# server A won't be prompted to approve the connection to server B.
+# remote has keys: 'hostname', 'username', 'password'
 def _apply_key_to_remote key, remote, source=nil
   temp_auth = Tempfile.new('auth')
 
@@ -84,12 +89,12 @@ def _apply_key_to_remote key, remote, source=nil
     puts "#{ source }'s key doesn't exist on #{ remote['id'] }, adding..."
     temp_auth.write("\n" + key + "\n")
     temp_auth.close
+
+    Net::SFTP.start(remote['hostname'], remote['username'], :auth_methods => ['publickey', 'password'], :password => remote['password']) do |sftp|
+      sftp.upload!(temp_auth.path, '.ssh/authorized_keys')
+    end
   else
     puts "#{ source }'s key already exists on #{ remote['id'] }"
-  end
-
-  Net::SFTP.start(remote['hostname'], remote['username'], :auth_methods => ['publickey', 'password'], :password => remote['password']) do |sftp|
-    sftp.upload!(temp_auth.path, '.ssh/authorized_keys')
   end
 end
 
