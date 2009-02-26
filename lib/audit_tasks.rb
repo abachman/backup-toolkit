@@ -6,10 +6,10 @@ namespace :audit do
     password = Capistrano::CLI.password_prompt("audit install password: ")
     password = nil if password.empty?
     Net::SFTP.start(hostname, username, :auth_methods => ['publickey', 'password'], :password => password) do |sftp|
-      sftp.mkdir!("backup-toolkit-audit") unless sftp.dir.entries('.').map(&:name).include? 'backup-toolkit-audit'
-      sftp.mkdir!("backup-toolkit-audit/audit") unless sftp.dir.entries('backup-toolkit-audit').map(&:name).include? 'audit'
-      sftp.mkdir!("backup-toolkit-audit/config") unless sftp.dir.entries('backup-toolkit-audit').map(&:name).include? 'config'
-      sftp.mkdir!("backup-toolkit-audit/lib") unless sftp.dir.entries('backup-toolkit-audit').map(&:name).include? 'lib'
+      sftp.mkdir!("backup-toolkit-audit") unless (sftp.dir.entries('.').map{|f|f.name}).include? 'backup-toolkit-audit'
+      sftp.mkdir!("backup-toolkit-audit/audit") unless (sftp.dir.entries('backup-toolkit-audit').map{|f|f.name}).include? 'audit'
+      sftp.mkdir!("backup-toolkit-audit/config") unless (sftp.dir.entries('backup-toolkit-audit').map{|f|f.name}).include? 'config'
+      sftp.mkdir!("backup-toolkit-audit/lib") unless (sftp.dir.entries('backup-toolkit-audit').map{|f|f.name}).include? 'lib'
       
       sftp.upload!("audit/generate_feeds.rb", "backup-toolkit-audit/audit/generate_feeds.rb")
       sftp.upload!("config/config-repo.yml", "backup-toolkit-audit/config/config-repo.yml")

@@ -75,8 +75,8 @@ def _apply_key_to_remote key, remote, source=nil
 
   # bring auth_key to local directory
   Net::SFTP.start(remote['hostname'], remote['username'], :auth_methods => ['publickey', 'password'], :password => remote['password'] ) do |sftp|
-    if sftp.dir.entries(".").map(&:name).include?('.ssh')
-      if sftp.dir.entries(".ssh").map(&:name).include?('authorized_keys')
+    if (sftp.dir.entries(".").map {|f| f.name}).include?('.ssh')
+      if (sftp.dir.entries(".ssh").map {|f| f.name}).include?('authorized_keys')
         sftp.download!(".ssh/authorized_keys", temp_auth.path)
       end
     else 

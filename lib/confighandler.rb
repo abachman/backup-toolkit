@@ -55,7 +55,6 @@ module ConfigHandler
 
   # Check local ./config directory for connection .yml files
   def self.load_all_configs
-    puts "loading local connection configurations"
     _servers = {} 
     conf_dir = LOCAL_CONFIG_DIRECTORY
     for file in Dir.new(conf_dir).select { |f| /^.*\.yml$/ =~ f }
@@ -77,8 +76,7 @@ module ConfigHandler
   # Check remote configuration server for connection .yml files (nodes and backups)
   def self.load_remote_configs servs
     configs = {}
-    (servs.select { |id, c| c['type'] == 'connections' }).map(&:last).each do |conf|
-      puts "loading remote connection configurations from #{ conf['hostname'] }"
+    ((servs.select { |id, c| c['type'] == 'connections' }).map { |s| s.last }).each do |conf|
       Net::SSH.start(conf['hostname'], conf['username'], :auth_methods => ['publickey']) do |ssh|
         config_files = ssh.exec!("[ -e #{ conf['config_directory'] } ] && ls #{ conf['config_directory'] }").chomp
         for conf_file in config_files
@@ -111,7 +109,7 @@ module ConfigHandler
     else
       res = all_servers.select { |id, conf| conf['type'] == 'node' }
     end
-    return (res.class == {}.class ? res : res.map(&:last))
+    return (res.class == {}.class ? res : res.map {|c| c.last})
   end
 
   def self.get_backups
@@ -121,16 +119,31 @@ module ConfigHandler
     else
       res = all_servers.select { |id, conf| conf['type'] == 'backup' }
     end
-    return (res.class == {}.class ? res : res.map(&:last))
+    return (res.class == {}.class ? res : res.map {|c| c.last})
   end
 
   def self.get_connections
-    return (all_servers.select { |id, c| c['type'] == 'connections' }).map(&:last)
+    return (all_servers.select { |id, c| c['type'] == 'connections' }).map {|c| c.last}
   end
 
   def self.create_temp_config_file config_hash
     temp = Tempfile.new('configfile')
     temp.write(YAML::dump( config_hash )); temp.close
     return temp
+  end
+
+  def self.create_new_config config_hash
+    tempfile = create_temp_config_file config_hash
+    filename = "#{ config_hash['username'] }-#{ config_hash['hostname'] }-#{ config_hash['type'] }.yml"
+    begin 
+      remote = all_connections.first
+      Net::SFTP.start(remote['hostname'], remote['username'], :auth_methods => ['publickey']) do |sftp|
+        sftp.upload!(tempfile.path, "#{ remote['config_directory'] }/#{ filename }")
+      end
+      puts "config saved to #{ remote['hostname'] }:#{ remote['config_directory'] }/#{ filename }"
+    rescue 
+      FileUtils.mv(tempfile.path, File.join(LOCAL_CONFIG_DIRECTORY, filename))
+      raise
+    end
   end
 end

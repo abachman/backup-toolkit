@@ -1,5 +1,6 @@
 # ConfigHandler
 
+desc "create new connection config files"
 namespace :connection do
   task :create do
     type = Capistrano::CLI.ui.ask("Which type of connection would you like to create (backup|node) ? ") do |q| 
@@ -13,6 +14,7 @@ namespace :connection do
     end
   end
 
+  desc "create node connection"
   namespace :node do
     task :create do
       # create node connection config file.
@@ -24,6 +26,7 @@ namespace :connection do
     end
   end
 
+  desc "create backup connection"
   namespace :backup do
     task :create do
       # create node connection config file.
