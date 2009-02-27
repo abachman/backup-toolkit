@@ -43,7 +43,7 @@ tstamp=`date +%Y_%m_%d`
 dirname=`echo $SOURCE | awk '{sub(/\//,"",$0); gsub(/\//,"-",$0); print $0}'`
 FILENAME=$tstamp-$dirname.tar.gz
 
-if [ "$VERBOPT"="v" ]; then
+if [ "$VERBOPT" = "v" ]; then
   printf "Generating directory backup for $SOURCE\n"
   printf "\ttarget\t$DESTINATION/$FILENAME\n"
 fi

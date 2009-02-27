@@ -4,3 +4,4 @@ type: node
 id: ubuntu-general-VM
 hostname: 192.168.1.31
 username: adam
+install_directory: /home/adam/backup-toolkit

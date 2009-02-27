@@ -1,3 +1,6 @@
+# ConfigHandler provides functions for managing connection and job config files.
+#
+
 require 'fileutils'
 require 'tempfile'
 require 'yaml'
@@ -39,6 +42,10 @@ module ConfigHandler
     YAML::load( str )
   end
 
+  def self.dump_yaml obj
+    YAML::dump( obj )
+  end
+
   def self.sample_configs; 
     "==== Sample Backup Config File \n#{ BACKUP_CONFIG_SAMPLE } \n\n"\
     "==== Sample Node Config File \n#{ NODE_CONFIG_SAMPLE } \n\n"\
@@ -70,7 +77,13 @@ module ConfigHandler
         puts "Compare to: \n #{ sample_configs }"
       end
     end
-    return _servers.merge( load_remote_configs(_servers) )
+    begin
+      _remote_servers = load_remote_configs _servers
+    rescue
+      puts "unable to connect to remote config server, using local: #{ _servers.keys.join(", ") }"
+      _remote_servers = {}
+    end
+    return _servers.merge(_remote_servers)
   end
 
   # Check remote configuration server for connection .yml files (nodes and backups)
@@ -126,15 +139,19 @@ module ConfigHandler
     return (all_servers.select { |id, c| c['type'] == 'connections' }).map {|c| c.last}
   end
 
+  # Create a temp file holding a YAML dump, return new Tempfile obj
   def self.create_temp_config_file config_hash
-    temp = Tempfile.new('configfile')
+    temp = Tempfile.new('conffile')
     temp.write(YAML::dump( config_hash )); temp.close
     return temp
   end
 
-  def self.create_new_config config_hash
+  # Create new connection config file and try to save it to the connection store.  If 
+  # that doesn't work, save it to the local config directory.
+  def self.create_new_connection_config config_hash
     tempfile = create_temp_config_file config_hash
-    filename = "#{ config_hash['username'] }-#{ config_hash['hostname'] }-#{ config_hash['type'] }.yml"
+    filename = "#{ config_hash['username'] }-#{ config_hash['hostname'] }-"\
+               "#{ config_hash['id'] }-#{ config_hash['type'] }.yml"
     begin 
       remote = all_connections.first
       Net::SFTP.start(remote['hostname'], remote['username'], :auth_methods => ['publickey']) do |sftp|
@@ -143,7 +160,9 @@ module ConfigHandler
       puts "config saved to #{ remote['hostname'] }:#{ remote['config_directory'] }/#{ filename }"
     rescue 
       FileUtils.mv(tempfile.path, File.join(LOCAL_CONFIG_DIRECTORY, filename))
-      raise
+    ensure
+      # make sure newly created connection is loaded into servers list.
+      all_servers[config_hash['id']] = config_hash
     end
   end
 end

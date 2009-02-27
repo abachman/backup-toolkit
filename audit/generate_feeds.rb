@@ -1,5 +1,5 @@
 # Should be deployed with:
-#   config/config-repo.yml
+#   config/connections-repo.yml
 #   lib/confighandler.rb
 #
 
@@ -52,13 +52,15 @@ def get_jobs_on_node conf
   Net::SSH.start(conf['hostname'], conf['username'], :auth_methods => ['publickey']) do |ssh|
     local_hostname = ssh.exec!("hostname").chomp
     # get backup dir
-    backup_dir = ssh.exec!("cat /etc/backup-toolkit.conf | grep conf | awk '{ print $2 }'").chomp
-    config_filenames = ssh.exec!("ls #{backup_dir}").split()
-    for c in config_filenames
-      config_dump = ssh.exec!("cat #{backup_dir}/#{c}")        
-      config_dump << "\n  local_hostname: #{ local_hostname }"
-      config_dump << "\n  config_filename: #{ c }"
-      conf = ConfigHandler::load_yaml( config_dump )       
+    remote_master_config = 
+      ConfigHandler::load_yaml(ssh.exec!("cat #{ conf['install_directory'] }/backup-toolkit.conf").chomp)
+    jobs_directory = remote_master_config['jobs_directory']
+    job_filenames = ssh.exec!("ls #{jobs_directory}").split()
+    for c in job_filenames
+      job_dump = ssh.exec!("cat #{jobs_directory}/#{c}")        
+      job_dump << "\n  local_hostname: #{ local_hostname }"
+      job_dump << "\n  job_filename: #{ c }"
+      conf = ConfigHandler::load_yaml( job_dump )       
       # {}.shift
       # {"a"=>{"b"=>1, "c"=>2}} becomes ["a", {"b"=>1, "c"=>2}]
       type, conf = conf.shift 
@@ -114,10 +116,10 @@ def generate_feeds_for_node node
   jobs.each do |job|
     files = find_files_on_backup job
     content = RSS::Maker.make("2.0") do |m|
-      m.channel.title = "backup-toolkit audit feed for node: #{ node['username'] }@#{ node['hostname'] }, job: #{ job['config_filename'] }"
+      m.channel.title = "backup-toolkit audit feed for node: #{ node['username'] }@#{ node['hostname'] }, job: #{ job['job_filename'] }"
       m.channel.link = "http://slsdev.net"
       m.channel.description = "node id: #{ node['id'] }; username: #{ node['username'] }; "\
-                              "hostname: #{ node['hostname'] }; job name: #{ job['config_filename'] }; "\
+                              "hostname: #{ node['hostname'] }; job name: #{ job['job_filename'] }; "\
                               "backing up to: #{ job['backup_username'] }@#{ job['backup_hostname'] }:"\
                               "~/#{ job['backup_destination'] }"
       m.items.do_sort = true
@@ -128,12 +130,12 @@ def generate_feeds_for_node node
         i.description = "#{ f[:name] }: #{ f[:attributes].size } bytes"
         i.date = Time.at(f[:attributes].mtime)
         i.guid.content = "#{ node['username'] }-#{ node['hostname'] }-"\
-                         "#{ job['local_hostname'] }-#{ job['config_filename'] }-"\
+                         "#{ job['local_hostname'] }-#{ job['job_filename'] }-"\
                          "#{ f[:name] }"
         i.guid.isPermaLink = false
       end
     end
-    feed_filename = "#{ node['username'] }-#{ node['hostname'] }-#{ job['local_hostname'] }-#{ job['config_filename'] }.xml"
+    feed_filename = "#{ node['username'] }-#{ node['hostname'] }-#{ job['local_hostname'] }-#{ job['job_filename'] }.xml"
     feeds << { 
       :filename => feed_filename, 
       :content => content.to_s,
@@ -159,15 +161,15 @@ def run()
     i.guid.isPermaLink = false
 
     visited_nodes = {}
-    ConfigHandler::all_nodes.each do |config|
-      next if visited_nodes["#{ config['username'] }@#{ config['hostname'] }"]
-      visited_nodes["#{ config['username'] }@#{ config['hostname'] }"] = true
+    ConfigHandler::all_nodes.each do |node|
+      next if visited_nodes["#{ node['username'] }@#{ node['hostname'] }"]
+      visited_nodes["#{ node['username'] }@#{ node['hostname'] }"] = true
 
-      feeds = generate_feeds_for_node config
-      puts "using #{ config.inspect }"
+      feeds = generate_feeds_for_node node
+      puts "using #{ node.inspect }"
       for feed in feeds
         # Add this feed's info to snapshot
-        job_title = "#{feed[:job]['config_filename']} on #{feed[:job]['local_hostname']}"
+        job_title = "#{feed[:job]['job_filename']} on #{feed[:job]['local_hostname']}"
         if Time.at(feed[:files].first()[:attributes].mtime) > one_day_ago 
           status_message = "up to date."
         else

@@ -31,7 +31,6 @@ def _get_server_info env
       conf_choices.each_with_index do |conf, n|
         puts " [#{n}] #{ conf['id'] } (#{ conf['username'] }@#{ conf['hostname'] })"
       end
-     
       choice = Capistrano::CLI.ui.ask("> ") { |q| q.default = 0; q.answer_type = Integer }
       opts = conf_choices[choice]
     end
@@ -46,8 +45,8 @@ def _get_server_info env
   end
 
   opts['ssh_address'] = "#{opts['username']}@#{opts['hostname']}" if (opts['username'] && opts['hostname'])
-  opts['password'] = Capistrano::CLI.password_prompt("#{ opts['ssh_address'] } password: ").chomp
-  opts['password'] = nil if opts['password'].empty?
+#  opts['password'] = Capistrano::CLI.password_prompt("#{ opts['ssh_address'] } password: ").chomp
+#  opts['password'] = nil if opts['password'].empty?
   opts || raise("no #{env} config available, add #{env}.yml to config directory. #{ sample_configs }")
 end
 

@@ -22,7 +22,7 @@ do
     ;;
   l) LIST_DBS=1
     ;;
-  h|?)
+  h|?|*)
     printf "Usage: %s [-vhl] [-u username] [-p password] " $(basename $0) >&2
     printf "[-s host] [-t /destination/directory] database\n" >&2
     printf "\t-l\tList databases and exit\n" >&2

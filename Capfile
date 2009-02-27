@@ -28,7 +28,7 @@ after "dist:uninstall", "dist:cleanup"
 namespace :dist do
   task :send_pkg, :roles => :node do
     `tar zcvf dist.tar.gz dist/`
-    upload 'dist.tar.gz', "/home/#{node_server['username']}/dist.tar.gz"  
+    upload 'dist.tar.gz', "dist.tar.gz"  
     run "tar xzvf dist.tar.gz"
   end
 
@@ -42,16 +42,32 @@ namespace :dist do
   task :install, :roles => :node do
     r_h = sprintf "%02i", (rand(4) + 1)
     r_m = sprintf "%02i", rand(60)
+    unless node_server['install_directory']
+      installdir = Capistrano::CLI.ui.ask("what is the remote install directory? ") {|q| q.default = '~/backup-toolkit'}
+    else 
+      installdir = node_server['install_directory']
+    end
     run_time = Capistrano::CLI.ui.ask("what time would you like to run backups (hh:mm)? [#{ r_h }:#{ r_m }] ")
     run_time = (run_time.chomp.empty? || run_time.count(':') != 1) ? "#{r_h}:#{r_m}" : run_time.chomp
-    sudo "dist/install.sh #{node_server['username']} #{ run_time.split(':')[0] } #{ run_time.split(':')[1] }"
-    run "cat /home/#{node_server['username']}/.backup-log/install.log"
+    run "dist/install.sh -h#{ run_time.split(':')[0] } -m#{ run_time.split(':')[1] } #{ installdir }"
   end
 
   desc "uninstall backup-toolkit on node"
   task :uninstall, :roles => :node do
-    sudo "dist/uninstall.sh #{node_server['username']}"
+    run "dist/uninstall.sh #{ node_server['install_directory'] }"
   end
+end
+
+desc "deploy backup-toolkit to a remote server"
+task :deploy do
+  conf = Capistrano::CLI.ui.ask("create new node connection? {Y|n}") {|q| q.default = "yes"} .downcase
+  connection.node.create if /[Yy]/ =~ conf
+  conf = Capistrano::CLI.ui.ask("create new backup connection? {y|N}") {|q| q.default = "no"} .downcase
+  connection.backup.create if /[Yy]/ =~ conf
+  keys.sync.default
+  dist.install
+  node.create_jobs
+  node.jobs
 end
 
 task :invoke do

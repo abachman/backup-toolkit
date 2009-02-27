@@ -1,41 +1,41 @@
 #!/usr/bin/env bash
+#
+# Uninstalls backup toolkit for $USER
 
-if [ -z "$1" ]; then
-  echo "Usage: uninstall.sh USER"
+function print_usage {
+  printf "Usage: %s installdir\n" $(basename $0) >&2
+}
+
+INSTALL=$1
+
+if [ -z "$INSTALL" ]; then
+  echo "Must include install directory"
+  print_usage
   exit 1
+fi
+
+if [ -e $INSTALL ]; then
+  INSTALL=$(cd $INSTALL && pwd)
 else
-  username=$1
-fi
-
-if [ ! "root" == "$(id | sed 's/uid=[0-9][0-9]*(\([^)]*\)).*/\1/')" ]; then
-  echo "uninstall.sh must be run as root."
+  echo "Invalid install directory: $INSTALL" >&2
   exit 1
 fi
 
-if [ ! -x "/home/$1" ]; then 
-  echo "User $1 has no /home/$1 directory, please give valid username" 
+filelog=$INSTALL/backup-log/install-files.log
+if [ ! -e $filelog ]; then
+  echo "NO $filelog, nothing to uninstall."
   exit 1
 fi
 
-echo "removing /home/$username/.backup-staging "
-rm -rf /home/$username/.backup-staging 
-echo "removing /home/$username/.backup-log "
-rm -rf /home/$username/.backup-log
-echo "removing /home/$username/.backup-config "
-rm -rf /home/$username/.backup-config
+for filename in $(cat $filelog); do
+  echo "removing $filename"
+  rm -rf $filename
+done
 
-echo "removing mysql-dump"
-rm -f /usr/local/bin/mysql-dump
-echo "removing tar-dump"
-rm -f /usr/local/bin/tar-dump 
-echo "removing backup-runner"
-rm -f /usr/local/bin/backup-runner
+cronfile=.tmp-cronfile
+# preserve existing cronjobs, remove backup-runner job.
+crontab -u $USER -l | grep -v backup-runner.rb > $cronfile
+# update cronjobs
+crontab -u $USER $cronfile
 
-echo "removing /etc/cron.d/backup-runner"
-rm -f /etc/cron.d/backup-runner
-
-echo "removing /etc/backup-toolkit.conf"
-rm -f /etc/backup-toolkit.conf
-
-echo "finished removing backup-toolkit"
-
+rm -rf $INSTALL

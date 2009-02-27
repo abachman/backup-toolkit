@@ -1,33 +1,105 @@
 #!/usr/bin/env bash
 #
-# Usage: 
-#  sudo ./install.sh [hour] [minute]
-#
 # Run from node.
 #
 # Installs:
-#   /usr/local/bin/mysql-dump
-#   /usr/local/bin/tar-dump
-#   /usr/local/bin/backup-runner
-#   /etc/cron.d/backup-runner 
+#   mysql-dump.sh
+#   tar-dump.sh
+#   backup-runner.rb
+#   backup-runner.cron
 #
 # Creates:
-#   /home/USER/.backup-staging
-#   /home/USER/.backup-log
-#   /home/USER/.backup-config
-#   /etc/backup-toolkit.conf
+#   backup-staging/
+#   backup-log/
+#   backup-jobs/
+#   backup-toolkit.conf
+#
+# Sets up crontab entry for backup-runner.rb
+
+function print_usage {
+  printf "Usage: %s [-h hour] [-m minute] /path/to/install/to\n" $(basename $0) >&2
+}
+
+while getopts 'h:m:d:' OPTION
+do
+  case $OPTION in
+  h) hour=$OPTARG
+    ;;
+  m) minute=$OPTARG
+    ;;
+  *) 
+    print_usage
+    exit 2
+    ;;
+  esac
+done
+shift $(($OPTIND - 1))
 
 if [ -z "$1" ]; then
-  echo "Usage: install.sh USER"
+  echo "Must include install directory"
+  print_usage
   exit 1
-else
-  username=$1
 fi
 
-if [ "$2" -a "$3" ]; then
-  hour=$2
-  minute=$3
-else
+# make sure install dir is fully specified
+mkdir -p $1
+INSTALL=$(cd $1 && pwd)
+echo "installing to $INSTALL as $USER"
+
+install_files=$INSTALL/backup-log/install-files.log
+mkdir -p $(dirname $install_files)
+function add_file { 
+  touch $1 
+  echo $1 >> $install_files 
+}
+function add_dir {
+  mkdir -p $1
+  echo $1 >> $install_files
+}
+
+add_dir $INSTALL
+add_dir $INSTALL/backup-staging
+add_dir $INSTALL/backup-log
+add_dir $INSTALL/backup-jobs
+
+echo -n > $install_files
+
+add_file $INSTALL/backup-log/run.log
+add_file $INSTALL/backup-log/error.log
+install_log=$INSTALL/backup-log/install.log
+add_file $install_log
+
+echo "--- $(date)" > $install_log
+datenow=$(date)
+function log { 
+  echo "[$datenow] $1" >> $install_log 
+}
+
+log "installing as $USER"
+
+master=$INSTALL/backup-toolkit.conf
+echo "---" > $master
+echo "jobs_directory: $INSTALL/backup-jobs" >> $master
+echo "staging_directory: $INSTALL/backup-staging" >> $master
+echo "logging_directory: $INSTALL/backup-log" >> $master
+echo "local_hostname: $(hostname)" >> $master
+echo "bin_directory: $INSTALL" >> $master
+
+chown -R $USER:$USER $INSTALL/backup-log
+chown -R $USER:$USER $INSTALL/backup-jobs
+chown -R $USER:$USER $INSTALL/backup-staging
+
+# get the name of the current directory
+dist=$PWD/$(dirname $0)
+
+for script in mysql-dump.sh tar-dump.sh backup-runner.rb; do
+  log "installing $script"
+  add_file $INSTALL/$script 
+  mv $dist/$script $INSTALL/$script
+done
+
+# Setup cronjob
+if [ -z "$hour" -o -z "$minute" ]; then
   ## insert cronjob to run at random time before 4 AM
   # m h dom mon dow user command
   minutes=60
@@ -38,61 +110,16 @@ else
   let "minute = $RANDOM % $minutes"
 fi
 
-if [ ! "root" == "$(id | sed 's/uid=[0-9][0-9]*(\([^)]*\)).*/\1/')" ]; then
-  echo "install.sh must be run as root."
-  exit 1
-fi
+log "installing backup-runner cronjob for runtime $hour:$minute and user $USER"
+cronfile=$INSTALL/backup-toolkit.cron
+add_file $cronfile
+# preserve existing cronjobs, replace backup-runner job.
+crontab -u $USER -l | grep -v backup-runner.rb > $cronfile
+# add new cronfile
+echo "$minute $hour * * * $INSTALL/backup-runner.rb" >> $cronfile
+# update cronjobs
+crontab -u $USER $cronfile
 
-if [ ! -x "/home/$1" ]; then 
-  echo "User $1 has no /home/$1 directory, please give valid username" 
-  exit 1
-fi
+log "finished installing backup-toolkit"
 
-if [ "`which $0`"="dist/install.sh" ]; then
-  curdir=dist/
-else
-  curdir=./
-fi
-
-mkdir -p /home/$username/.backup-staging
-mkdir -p /home/$username/.backup-log
-touch /home/$username/.backup-log/run.log
-touch /home/$username/.backup-log/error.log
-install_log=/home/$username/.backup-log/install.log
-echo "--- $(date)" > $install_log
-mkdir -p /home/$username/.backup-config
-master=/etc/backup-toolkit.conf
-echo "---" > $master
-echo "config_directory: /home/$username/.backup-config" >> $master
-echo "staging_directory: /home/$username/.backup-staging" >> $master
-echo "logging_directory: /home/$username/.backup-log" >> $master
-echo "local_hostname: $(hostname)"
-
-chown -R $username:$username /home/$username/.backup-log
-chown -R $username:$username /home/$username/.backup-config
-chown -R $username:$username /home/$username/.backup-staging
-
-echo "[$(date)] installing mysql-dump" >> $install_log
-chmod +x $curdir/mysql-dump.sh 
-cp $curdir/mysql-dump.sh /usr/local/bin/mysql-dump
-echo "[$(date)] installing tar-dump" >> $install_log
-chmod +x $curdir/tar-dump.sh
-cp $curdir/tar-dump.sh /usr/local/bin/tar-dump 
-echo "[$(date)] installing backup-runner" >> $install_log
-chmod +x $curdir/backup-runner.rb
-cp $curdir/backup-runner.rb /usr/local/bin/backup-runner
-
-echo "[$(date)] installing /etc/cron.d/backup-runner for runtime $hour:$minute" >> $install_log
-
-
-cronfile=/etc/cron.d/backup-runner
-touch $cronfile
-chmod +x $cronfile
-echo "# cron entry for backup-runner (SLS Internal)" >  $cronfile
-echo "SHELL=/bin/sh" >> $cronfile
-echo "PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin" >> $cronfile
-echo "$minute $hour * * * $username /usr/local/bin/backup-runner" >> $cronfile
-
-echo "[$(date)] finished installing backup-toolkit" >> $install_log
-
-echo "install complete, see $install_log for details."
+echo cat $install_log
