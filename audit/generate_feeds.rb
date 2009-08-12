@@ -204,6 +204,7 @@ def post_to_windev2 filename, content
   print "POSTING #{ filename } to #{ url.path }: "
   req.set_form_data({ 'filename' => filename, 'content' => content, 'upload_key' => ACCESS_KEY })
   _http = Net::HTTP.new(url.host, url.port)
+  _http.verify_mode = OpenSSL::SSL::VERIFY_NONE
   _http.use_ssl = true
   res = _http.start do |http| 
     http.use_ssl = true

@@ -37,11 +37,11 @@ namespace :connection do
         if /~/ =~ config['install_directory']
           puts 'resolving install directory on remote server'
           inst = config['install_directory']
-          rinst = capture("mkdir -p #{inst} && cd #{inst} && pwd" , :hosts => config['ssh_address'], :auth_methods => ['password']).chomp
+          rinst = capture("mkdir -p #{inst} && cd #{inst} && pwd", :hosts => config['ssh_address']).chomp
           config['install_directory'] = rinst
         end
         ConfigHandler::create_new_connection_config(config)
-                set :node, config['ssh_address']
+        set :node, config['ssh_address']
         set :node_server, config
       else
         puts 'invalid connection, skipping...'

@@ -7,7 +7,9 @@ namespace :backup do
     Net::SFTP.start(backup_server['hostname'], backup_server['username'], 
                     :password => backup_server['password'], :auth_methods => %w(publickey password)) do |sftp|
       if (sftp.dir.entries(".").map { |e| e.name }).include? backup_server['backup_storage']
-        puts (sftp.dir.entries(backup_server['backup_storage']).map { |e| e.name }).sort
+        # filter out . and ..
+        file_list = (sftp.dir.entries(backup_server['backup_storage']).map { |e| e unless /^\.\.?$/ =~ e.name }).compact
+        puts (file_list.sort {|a,b| a.name <=> b.name}).map {|f| "#{f.attributes.size / 1024}KB\t\t#{f.name}"}
       else 
         puts "Backup storage directory, '#{ backup_server['backup_storage'] }', doesn't exist on #{ backup_server['ssh_address'] }"
       end

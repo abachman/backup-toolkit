@@ -45,7 +45,7 @@ end
 
 def get_backup_command_params
   backup_settings = {
-    'backup_destination' => "backups",
+    'backup_destination' => backup_server['backup_storage'],
     'backup_hostname' => backup_server['hostname'],
     'backup_username' => backup_server['username']
   }
@@ -60,9 +60,10 @@ def get_backup_command_params
       unless database && username && password 
         puts "!! Must enter all values."
       else 
+        # replace $ with \$ to prevent command line breakage.
         params << {'mysql' => { 'database' => database,
                                'username' => username,
-                               'password' => password}.merge(backup_settings) }
+                               'password' => password.gsub(/\$/,'\$')}.merge(backup_settings) }
       end
     when /^d/
       path = Capistrano::CLI.ui.ask("[dir] enter path to backup", nil)

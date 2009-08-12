@@ -49,7 +49,7 @@ namespace :dist do
     end
     run_time = Capistrano::CLI.ui.ask("what time would you like to run backups (hh:mm)? [#{ r_h }:#{ r_m }] ")
     run_time = (run_time.chomp.empty? || run_time.count(':') != 1) ? "#{r_h}:#{r_m}" : run_time.chomp
-    run "dist/install.sh -h#{ run_time.split(':')[0] } -m#{ run_time.split(':')[1] } #{ installdir }"
+    run "dist/install.sh -h#{ run_time.split(':')[0] } -m#{ run_time.split(':')[1] } #{ installdir }", :verbose => Logger::DEBUG
   end
 
   desc "uninstall backup-toolkit on node"
@@ -60,10 +60,10 @@ end
 
 desc "deploy backup-toolkit to a remote server"
 task :deploy do
-  conf = Capistrano::CLI.ui.ask("create new node connection? {Y|n}") {|q| q.default = "yes"} .downcase
-  connection.node.create if /[Yy]/ =~ conf
-  conf = Capistrano::CLI.ui.ask("create new backup connection? {y|N}") {|q| q.default = "no"} .downcase
-  connection.backup.create if /[Yy]/ =~ conf
+  confirm = Capistrano::CLI.ui.ask("create new node connection? {Y|n}") {|q| q.default = "yes"} .downcase
+  connection.node.create if /[Yy]/ =~ confirm
+  confirm = Capistrano::CLI.ui.ask("create new backup connection? {y|N}") {|q| q.default = "no"} .downcase
+  connection.backup.create if /[Yy]/ =~ confirm
   keys.sync.default
   dist.install
   node.create_jobs

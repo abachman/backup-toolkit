@@ -77,12 +77,12 @@ module ConfigHandler
         puts "Compare to: \n #{ sample_configs }"
       end
     end
-    begin
+#    begin
       _remote_servers = load_remote_configs _servers
-    rescue
-      puts "unable to connect to remote config server, using local: #{ _servers.keys.join(", ") }"
-      _remote_servers = {}
-    end
+#    rescue
+#      puts "unable to connect to remote config server, using local: #{ _servers.keys.join(", ") }"
+#      _remote_servers = {}
+#    end
     return _servers.merge(_remote_servers)
   end
 
@@ -91,20 +91,26 @@ module ConfigHandler
     configs = {}
     ((servs.select { |id, c| c['type'] == 'connections' }).map { |s| s.last }).each do |conf|
       Net::SSH.start(conf['hostname'], conf['username'], :auth_methods => ['publickey']) do |ssh|
-        config_files = ssh.exec!("[ -e #{ conf['config_directory'] } ] && ls #{ conf['config_directory'] }").chomp
-        for conf_file in config_files
-          config_text = ssh.exec!("cat #{ conf['config_directory'] }/#{ conf_file }")
-          config = load_yaml(config_text)
-          if validate_config(config)
-            configs[config['id']] = config
-          else
-            puts "Invalid configuration found in repo "\
-              "(#{ conf['username'] }@#{ conf['hostname'] }:~/#{ conf['config_directory'] }): "
-            puts "==== #{ conf_file }"
-            puts config_text
-            puts
-            puts "Compare to: \n #{ sample_configs }"
+        config_files = ssh.exec!("[ -e #{ conf['config_directory'] } ] && ls #{ conf['config_directory'] }")
+        if config_files
+          config_files = config_files.chomp
+          for conf_file in config_files
+            config_text = ssh.exec!("cat #{ conf['config_directory'] }/#{ conf_file }")
+            config = load_yaml(config_text)
+            if validate_config(config)
+              configs[config['id']] = config
+            else
+              puts "Invalid configuration found in repo "\
+                "(#{ conf['username'] }@#{ conf['hostname'] }:~/#{ conf['config_directory'] }): "
+              puts "==== #{ conf_file }"
+              puts config_text
+              puts
+              puts "Compare to: \n #{ sample_configs }"
+            end
           end
+        else
+          puts "No config files found on remote server."
+          puts
         end
       end
     end
