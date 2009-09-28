@@ -1,3 +1,5 @@
 config/dreamhost-backup.yml
 feeds/
+blog_post_*
+try.rb
 
