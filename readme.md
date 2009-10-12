@@ -43,7 +43,7 @@ Goals:
 
 There are two halves to backup-toolkit, on the frontend, there's Capistrano making it easy to deploy, configure, run, and checkup on your servers. The frontend pieces are located in config and lib.
 
-On the backend, there's the stuff in *dist/*.  When running `cap dist:install`, it all gets sent to your remote server (*node*) and is installed. **install.sh** has the scoop on what happens at the node during installation.
+On the backend, there's the stuff in `dist/`.  When running `cap dist:install`, it all gets sent to your remote server (*node*) and is installed. **install.sh** has the scoop on what happens at the node during installation.
 
 That's it, there aren't any scripts or pieces of the install that mess with your backup server.  As far as backup-toolkit is concerned, it's just a bit bucket.
 
@@ -90,7 +90,7 @@ Create config files in *backup-toolkit/config* on your machine.  They look like:
     backup_storage: backups   # where the backups will be stored relative to 
                               # username's home directory
 
-* config/config-repo.yml
+*config/config-repo.yml*
 
     # Example connection repo config 
 
@@ -137,7 +137,7 @@ All tasks accept `BT_NODE=[node id]` and `BT_BACKUP=[backup id]` to skip the con
 
 From admin:
 
-1. `cap deploy` - follow the steps.
+1. `cap deploy` - follow the steps. Done.
 
 Optional
 
