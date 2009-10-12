@@ -92,7 +92,8 @@ chown -R $USER:$USER $INSTALL/backup-staging
 # get the name of the current directory
 dist=$PWD/$(dirname $0)
 
-for script in mysql-dump.sh tar-dump.sh backup-runner.rb; do
+# Add new bin directory scripts here.
+for script in mysql-dump.sh tar-dump.sh backup-runner.rb setup-ssh.sh; do
   log "installing $script"
   add_file $INSTALL/$script 
   mv $dist/$script $INSTALL/$script

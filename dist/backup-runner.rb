@@ -83,6 +83,9 @@ end
 
 log.info("sending staged backups")
 for config in BACKUP_SETTINGS
+  # Make sure we know the host we'll be sending to.
+  `#{BACKUP_BIN_DIR.path}/setup-ssh.sh #{config["backup_hostname"]}`
+
   type = config['type']
   unless config['local_filename'] # FAIL
     log.error("backup file creation failed for job: #{ config['file'] }")
