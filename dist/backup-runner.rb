@@ -29,6 +29,8 @@ end
 if not found 
   puts "Failed to find config file! ABORT"
   raise "FAILED TO FIND CONFIG FILE"
+else 
+  puts "found config.... running"
 end
 
 BACKUP_JOBS_DIR = Dir.new(MASTER_CONFIG['jobs_directory'])
@@ -38,7 +40,8 @@ BACKUP_BIN_DIR = Dir.new(MASTER_CONFIG['bin_directory'])
 HOSTNAME = MASTER_CONFIG['local_hostname'] || `hostname`.chomp
 
 # Setup logger
-log_file = File.open(File.join(BACKUP_LOGGING_DIR.path, "run.log"), 'a')
+log_file = File.open(File.join(BACKUP_LOGGING_DIR.path, "run.log"), 
+                     File::WRONLY | File::APPEND | File::CREAT | File::SYNC)
 log = Logger.new(log_file, 10, 1024000)
 log.level = Logger::DEBUG
 
@@ -47,6 +50,7 @@ log.info("starting backup of #{ HOSTNAME }")
 BACKUP_SETTINGS = []
 BACKUP_JOBS_DIR.each do |file|
   next unless /^.*\.backup$/ =~ file
+  puts "loading file: #{ file }"
   log.debug("loading file: #{ file }")
   job = File.open(File.join(BACKUP_JOBS_DIR.path, file)) { |f| YAML::load( f ) }
   # job is {type => { setting => 'value', setting_two => 'value' }}
@@ -64,9 +68,11 @@ for config in BACKUP_SETTINGS
   # do all backups.
   case config['type']
   when 'directory'
+    puts "doing directory backup of #{config['path']}"
     log.debug("doing directory backup of #{config['path']}")
     output = `#{BACKUP_BIN_DIR.path}/tar-dump.sh -d#{BACKUP_STAGING_DIR.path} #{config['path']}`
   when 'mysql'
+    puts "doing mysql backup of #{config["database"]}"
     log.debug("doing mysql backup of #{config["database"]}")
     output = `#{BACKUP_BIN_DIR.path}/mysql-dump.sh -v -u#{config['username']} -p#{config['password']} -t#{BACKUP_STAGING_DIR.path} #{config['database']}`
   else
@@ -84,6 +90,7 @@ end
 log.info("sending staged backups")
 for config in BACKUP_SETTINGS
   # Make sure we know the host we'll be sending to.
+  puts "confirming known host status"
   `#{BACKUP_BIN_DIR.path}/setup-ssh.sh #{config["backup_hostname"]}`
 
   type = config['type']
@@ -93,11 +100,14 @@ for config in BACKUP_SETTINGS
   end
   local_fullfilename = config['local_filename']
   local_filename = File.split(local_fullfilename).last
+  puts "sending #{local_filename} to #{config["backup_hostname"]}:#{config["backup_destination"]}"
   log.debug("sending #{local_filename} to #{config["backup_hostname"]}:#{config["backup_destination"]}")
   begin
     # Copy file from local to remote, renaming to prepend the sender (this node's hostname).
+    puts "SCP COMMAND: nice scp #{local_fullfilename} #{config["backup_username"]}@#{config["backup_hostname"]}:#{config["backup_destination"]}/#{ HOSTNAME }-#{local_filename}"
     `nice scp #{local_fullfilename} #{config["backup_username"]}@#{config["backup_hostname"]}:#{config["backup_destination"]}/#{ HOSTNAME }-#{local_filename}`
-    log.info "#{local_filename} sent to #{config["backup_hostname"]}:#{config["backup_destination"]}/#{ HOSTNAME }-#{local_filename}"
+    puts "#{local_filename} sent to #{config["backup_hostname"]}:#{config["backup_destination"]}/#{ HOSTNAME }-#{local_filename}"
+    log.info("#{local_filename} sent to #{config["backup_hostname"]}:#{config["backup_destination"]}/#{ HOSTNAME }-#{local_filename}")
   rescue
     log.error("ERROR SENDING #{ local_filename } to #{ config["backup_hostname"] }:#{ config["backup_destination"] }")
     if config['count'] < MAX_RETRY

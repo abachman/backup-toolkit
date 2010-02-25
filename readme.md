@@ -1,13 +1,3 @@
-
-***this readme is out of date as of 2009-02-27 due to extensive rewriting***  
-
-For now, run `cap deploy` to go through every necessary step. Please note, the first execution of backup-runner.rb on the remote machine (*node*) should be run from the node since you'll have to go through the ssh known hosts procedure:
-
-    The authenticity of host 'hostname (255.255.255.255)'
-        can't be established.
-    RSA key fingerprint is 00:02:06:04:09:86:90:40:04:30:77:07:04:00:59:14.
-    Are you sure you want to continue connecting (yes/no)? 
-
 # SLS Backup Toolkit 
 
 backup-toolkit is a collection of Capistrano recipes and linux scripts intended to make the remote control of backups simple and painless. 
@@ -68,7 +58,7 @@ You, the administrator, must have Ruby and Capistrano installed.  The nodes must
 
 ### Setting Up Your Environment
 
-Create config files in *backup-toolkit/config* on your machine.  They look like: 
+Create config files in *backup-toolkit/config* on your machine manually or by using `cap connection:create`.  They look like: 
 
 *config/sample-node.yml*
 

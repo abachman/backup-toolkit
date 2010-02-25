@@ -52,6 +52,14 @@ namespace :dist do
     run "dist/install.sh -h#{ run_time.split(':')[0] } -m#{ run_time.split(':')[1] } #{ installdir }", :verbose => Logger::DEBUG
   end
 
+  desc "update the core backup-toolkit scripts on node"
+  task :update, :roles => :node do
+    installdir = node_server['install_directory']
+    %w(backup-runner.rb mysql-dump.sh setup-ssh.sh tar-dump.sh).each do |file|
+      upload "dist/#{file}", "#{installdir}/#{file}"
+    end
+  end
+
   desc "uninstall backup-toolkit on node"
   task :uninstall, :roles => :node do
     run "dist/uninstall.sh #{ node_server['install_directory'] }"

@@ -5,7 +5,8 @@ namespace :backup do
   desc "list backup files on the backup server"
   task :list, :roles => :backup do
     Net::SFTP.start(backup_server['hostname'], backup_server['username'], 
-                    :password => backup_server['password'], :auth_methods => %w(publickey password)) do |sftp|
+                    :password => backup_server['password'], 
+                    :auth_methods => %w(publickey password)) do |sftp|
       if (sftp.dir.entries(".").map { |e| e.name }).include? backup_server['backup_storage']
         # filter out . and ..
         file_list = (sftp.dir.entries(backup_server['backup_storage']).map { |e| e unless /^\.\.?$/ =~ e.name }).compact

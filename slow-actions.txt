@@ -1,0 +1,5 @@
+1. run for TODAY
+  
+  $ slow-actions --actions --min-cost=2 --start-date=TODAY-1 --end-date=TODAY-1 path/to/log_file | gzip > path/to/slow-actions.txt.gz
+
+2. done
