@@ -2,9 +2,9 @@
 #
 # Get backup settings files and run all scheduled backups.
 #
-# Expects only the master config file: backup-toolkit.conf 
+# Expects only the master config file: backup-toolkit.conf
 #
-# This script generates and executes command line commands based on 
+# This script generates and executes command line commands based on
 # the config.backup files contained in $install_directory/backup-jobs
 #
 
@@ -26,10 +26,10 @@ for filename in %w( backup-toolkit.conf ../backup-toolkit.conf ../backup-config/
     break
   end
 end
-if not found 
+if not found
   puts "Failed to find config file! ABORT"
   raise "FAILED TO FIND CONFIG FILE"
-else 
+else
   puts "found config.... running"
 end
 
@@ -40,7 +40,7 @@ BACKUP_BIN_DIR = Dir.new(MASTER_CONFIG['bin_directory'])
 HOSTNAME = MASTER_CONFIG['local_hostname'] || `hostname`.chomp
 
 # Setup logger
-log_file = File.open(File.join(BACKUP_LOGGING_DIR.path, "run.log"), 
+log_file = File.open(File.join(BACKUP_LOGGING_DIR.path, "run.log"),
                      File::WRONLY | File::APPEND | File::CREAT | File::SYNC)
 log = Logger.new(log_file, 10, 1024000)
 log.level = Logger::DEBUG
@@ -79,7 +79,7 @@ for config in BACKUP_SETTINGS
     puts "FAILURE! UNKNOWN BACKUP TYPE!" # FAIL
     next
   end
- 
+
   # Store generated values in config hash
   # last line of output should return created filename.
   local_filename = output.split.last
@@ -89,27 +89,44 @@ end
 
 log.info("sending staged backups")
 for config in BACKUP_SETTINGS
+  # trailing destination info
+  year = Time.new.year
+  month = "%02i" % Time.new.month
+  backup_target_directory_args = [config["backup_destination"], HOSTNAME, year, month]
+  backup_target_directory = File.join(*backup_target_directory_args)
+
   # Make sure we know the host we'll be sending to.
   puts "confirming known host status"
   `#{BACKUP_BIN_DIR.path}/setup-ssh.sh #{config["backup_hostname"]}`
 
-  type = config['type']
-  unless config['local_filename'] # FAIL
+  # FAIL, file was never created for this local_filename
+  unless config['local_filename']
     log.error("backup file creation failed for job: #{ config['file'] }")
     next
   end
+
   local_fullfilename = config['local_filename']
   local_filename = File.split(local_fullfilename).last
-  puts "sending #{local_filename} to #{config["backup_hostname"]}:#{config["backup_destination"]}"
+
+  puts "sending #{local_filename} to #{config["backup_hostname"]}:#{backup_target_directory}"
   log.debug("sending #{local_filename} to #{config["backup_hostname"]}:#{config["backup_destination"]}")
+
+  scp_target  = "#{config["backup_username"]}@#{config["backup_hostname"]}"
+  file_target = "#{backup_target_directory}/#{local_filename}"
+
   begin
+    # Create remote directory structure
+    command = ""
+    backup_target_directory_args.each_with_index do |dir, n|
+      command << "mkdir #{ backup_target_directory_args[0..n].join("/") }\\n"
+    end
+    `echo -n '#{ command }' | sftp #{scp_target}`
+
     # Copy file from local to remote, renaming to prepend the sender (this node's hostname).
-    puts "SCP COMMAND: nice scp #{local_fullfilename} #{config["backup_username"]}@#{config["backup_hostname"]}:#{config["backup_destination"]}/#{ HOSTNAME }-#{local_filename}"
-    `nice scp #{local_fullfilename} #{config["backup_username"]}@#{config["backup_hostname"]}:#{config["backup_destination"]}/#{ HOSTNAME }-#{local_filename}`
-    puts "#{local_filename} sent to #{config["backup_hostname"]}:#{config["backup_destination"]}/#{ HOSTNAME }-#{local_filename}"
-    log.info("#{local_filename} sent to #{config["backup_hostname"]}:#{config["backup_destination"]}/#{ HOSTNAME }-#{local_filename}")
+    `nice scp #{local_fullfilename} #{scp_target}:#{file_target}`
+    log.info("#{local_filename} sent to #{scp_target}:#{file_target}")
   rescue
-    log.error("ERROR SENDING #{ local_filename } to #{ config["backup_hostname"] }:#{ config["backup_destination"] }")
+    log.error("ERROR SENDING #{ local_filename } to #{ scp_target }:#{ file_target }")
     if config['count'] < MAX_RETRY
       config['count'] = config['count'] + 1
       BACKUP_SETTINGS << config
