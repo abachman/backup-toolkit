@@ -90,7 +90,7 @@ end
 log.info("sending staged backups")
 for config in BACKUP_SETTINGS
   # trailing destination info
-  year = Time.new.year
+  year = Time.new.year.to_s
   month = "%02i" % Time.new.month
   backup_target_directory_args = [config["backup_destination"], HOSTNAME, year, month]
   backup_target_directory = File.join(*backup_target_directory_args)
