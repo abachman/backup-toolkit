@@ -42,6 +42,7 @@ HOSTNAME = MASTER_CONFIG['local_hostname'] || `hostname`.chomp
 # Setup logger
 log_file = File.open(File.join(BACKUP_LOGGING_DIR.path, "run.log"),
                      File::WRONLY | File::APPEND | File::CREAT | File::SYNC)
+log_file.sync = true
 log = Logger.new(log_file, 10, 1024000)
 log.level = Logger::DEBUG
 
