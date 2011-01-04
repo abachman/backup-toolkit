@@ -51,7 +51,7 @@ trap 'rm -f "$lockfile"; exit' INT TERM EXIT
 
 # clean backups older than 30 days if we have at least 10 more recent ones.
 # this will prevent the deletion of old backups if we have no current ones.
-if [ $(find $BACKUP_STAGING_DIR/*.tar.gz -mtime -30 -exec echo {} \; | wc -l) -gt 5]; then
+if [ $(find $BACKUP_STAGING_DIR/*.tar.gz -mtime -30 -exec echo {} \; | wc -l) -gt 5 ]; then
   find $BACKUP_STAGING_DIR/*.tar.gz -mtime +30 -exec rm {} \;
 fi
 
