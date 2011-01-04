@@ -11,18 +11,21 @@
 # or
 #   curl -k https://github.com/abachman/backup-toolkit/raw/master/simple/install.sh | sh
 # if you get ssl certificate problems
+#
+# Update with:
+#   curl -k https://github.com/abachman/backup-toolkit/raw/master/simple/backup-runner.sh > ~/bin/backup-runner.sh
 
 set -e
 set -u
-
-function log {
-  echo "[$(date +"%Y/%m/%d %H:%M:%S")] $1"
-}
 
 # important local variables
 ROOT=/home/deploy
 BACKUP_STAGING_DIR=$ROOT/backup-staging
 mkdir -p $BACKUP_STAGING_DIR
+
+function log {
+  echo "[$(date +"%Y/%m/%d %H:%M:%S")] $1" >> $ROOT/logs/backup.log
+}
 
 # More important variables, config filename is passed in when script is called
 if [ -e $1 ]; then
