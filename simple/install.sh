@@ -1,12 +1,21 @@
 # Install thyself.
+#
+# On the server to be backed up, run:
+#   curl https://github.com/abachman/backup-toolkit/raw/master/simple/install.sh | sh
+# or
+#   curl -k https://github.com/abachman/backup-toolkit/raw/master/simple/install.sh | sh
+# if you get ssl certificate problems
+
 mkdir -p ~/bin
-wget https://github.com/abachman/backup-toolkit/raw/master/simple/backup-runner.sh ~/bin/backup-runner.sh
-wget https://github.com/abachman/backup-toolkit/raw/master/dist/tar-dump.sh ~/bin/tar-dump.sh
-wget https://github.com/abachman/backup-toolkit/raw/master/dist/mysql-dump.sh ~/bin/mysql-dump.sh
+curl -k https://github.com/abachman/backup-toolkit/raw/master/simple/backup-runner.sh > ~/bin/backup-runner.sh
+curl -k https://github.com/abachman/backup-toolkit/raw/master/dist/tar-dump.sh > ~/bin/tar-dump.sh
+curl -k https://github.com/abachman/backup-toolkit/raw/master/dist/mysql-dump.sh > ~/bin/mysql-dump.sh
 
 for f in backup-runner.sh tar-dump.sh mysql-dump.sh; do
   if [ -e ~/bin/$f ]; then
-    chmod +x ~/bin/$f 
+    chmod +x ~/bin/$f
+  else
+    echo "ERROR DOWNLOADING FILE ~/bin/$f"
   fi
 done
 

@@ -4,9 +4,13 @@
 #   https://github.com/abachman/backup-toolkit/raw/master/dist/mysql-dump.sh
 #   https://github.com/abachman/backup-toolkit/raw/master/dist/tar-dump.sh
 # 
+# From https://github.com/abachman/backup-toolkit
+# 
 # On the server to be backed up, run:
-#   sh < <(curl https://github.com/abachman/backup-toolkit/raw/master/simple/install.sh)
-#
+#   curl https://github.com/abachman/backup-toolkit/raw/master/simple/install.sh | sh
+# or 
+#   curl -k https://github.com/abachman/backup-toolkit/raw/master/simple/install.sh | sh
+# if you get ssl certificate problems
 
 set -e
 set -u
