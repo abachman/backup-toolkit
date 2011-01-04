@@ -83,11 +83,11 @@ fi
 ssh $REMOTE_USER@$REMOTE_HOST "mkdir -p $REMOTE_DIR"
 
 if [ -e $TAR_FILE ]; then
-  nice scp $TAR_FILE $REMOTE_USER@$REMOTE_HOST:$REMOTE_DIR
+  nice rsync $TAR_FILE $REMOTE_USER@$REMOTE_HOST:$REMOTE_DIR
 fi
 
 if [ -e $MYSQL_FILE ]; then
-  nice scp $MYSQL_FILE $REMOTE_USER@$REMOTE_HOST:$REMOTE_DIR
+  nice rsync $MYSQL_FILE $REMOTE_USER@$REMOTE_HOST:$REMOTE_DIR
 fi
 
 log "done"
