@@ -1,14 +1,14 @@
 # Backup Script
-# 
+#
 # Requires:
 #   https://github.com/abachman/backup-toolkit/raw/master/dist/mysql-dump.sh
 #   https://github.com/abachman/backup-toolkit/raw/master/dist/tar-dump.sh
-# 
+#
 # From https://github.com/abachman/backup-toolkit
-# 
+#
 # On the server to be backed up, run:
 #   curl https://github.com/abachman/backup-toolkit/raw/master/simple/install.sh | sh
-# or 
+# or
 #   curl -k https://github.com/abachman/backup-toolkit/raw/master/simple/install.sh | sh
 # if you get ssl certificate problems
 
@@ -46,7 +46,14 @@ fi
 echo $$ > $lockfile
 trap 'rm -f "$lockfile"; exit' INT TERM EXIT
 
+########
 # Backup
+
+# clean backups older than 30 days if we have at least 10 more recent ones.
+# this will prevent the deletion of old backups if we have no current ones.
+if [ $(find $BACKUP_STAGING_DIR/*.tar.gz -mtime -30 -exec echo {} \; | wc -l) -gt 5]; then
+  find $BACKUP_STAGING_DIR/*.tar.gz -mtime +30 -exec rm {} \;
+fi
 
 # directory backup
 tarout=$ROOT/.backup-runner.tar.out
@@ -70,6 +77,7 @@ else
   log "bad mysql-dump.sh exit status"
 fi
 
+######
 # Send
 
 ssh $REMOTE_USER@$REMOTE_HOST "mkdir -p $REMOTE_DIR"
