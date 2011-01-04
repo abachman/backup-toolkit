@@ -23,8 +23,9 @@ ROOT=/home/deploy
 BACKUP_STAGING_DIR=$ROOT/backup-staging
 mkdir -p $BACKUP_STAGING_DIR
 
+logfile=$ROOT/logs/backup.log
 function log {
-  echo "[$(date +"%Y/%m/%d %H:%M:%S")] $1" >> $ROOT/logs/backup.log
+  echo "[$(date +"%Y/%m/%d %H:%M:%S")] $1" >> $logfile
 }
 
 # More important variables, config filename is passed in when script is called
@@ -86,11 +87,11 @@ fi
 ssh $REMOTE_USER@$REMOTE_HOST "mkdir -p $REMOTE_DIR"
 
 if [ -e $TAR_FILE ]; then
-  nice rsync $TAR_FILE $REMOTE_USER@$REMOTE_HOST:$REMOTE_DIR
+  nice rsync $TAR_FILE $REMOTE_USER@$REMOTE_HOST:$REMOTE_DIR >> $logfile
 fi
 
 if [ -e $MYSQL_FILE ]; then
-  nice rsync $MYSQL_FILE $REMOTE_USER@$REMOTE_HOST:$REMOTE_DIR
+  nice rsync $MYSQL_FILE $REMOTE_USER@$REMOTE_HOST:$REMOTE_DIR >> $logfile
 fi
 
 log "done"
